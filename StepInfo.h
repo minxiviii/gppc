@@ -3,49 +3,43 @@
 class StepGroup
 {
 private:
-	string start_current;
-	string end_current;
-	string interval;
-	vector<int> output_ports;
+	/* string for ui*/
+	string start_current_text;
+	string end_current_text;
+	string interval_text;
 
+	float start_current;
+	float end_current;
+	float interval;
+
+
+	int dec_start;
+	int dec_end;
+	int iter;
+	int gain;
+
+	int delayms;
+
+	vector<int> output_ports;
 	StepGroup() {}
 
 public:
-	StepGroup(string start_current, string end_current, string interval, vector<int> output_ports);
+	StepGroup(string start_current, string end_current, string interval, vector<int> output_ports, int delayms = 0);
 	~StepGroup();
 
-	string GetStartCurrent();
-	string GetEndCurrent();
-	string GetInterval();
+	string GetStartCurrentText();
+	string GetEndCurrentText();
+	string GetIntervalText();
+
+	float GetStartCurrent();
+	float GetEndCurrent();
+	float GetInterval();
+
 	vector<int> GetOutputPorts();
+	BOOL IsOver();
+	void ResetCurrent();
+	void Gain();
+	float GetCurrnet();
 
-	//StepGroup& operator=(const StepGroup&);
+	int GetDelayms();	
 };
-
-/*
-class StepInfo
-{
-private:
-	vector<StepGroup> step_groups;
-
-public:
-	StepInfo() : step_groups(3) {}
-	~StepInfo() { step_groups.clear(); }
-
-	void Add(StepGroup step_group)
-	{
-		step_groups.push_back(step_group);
-	}
-
-	void Remove(int index)
-	{
-		//step_groups.erase(index);
-	}
-
-	StepGroup Get(int index)
-	{
-		return step_groups.at(index);
-	}
-	
-};
-*/

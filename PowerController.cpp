@@ -81,7 +81,11 @@ DWORD WINAPI PowerPort::ScheduleThread(void* data)
 				case eCmdDelay:
 					Sleep((port->m_schedule)[i].getDelay());
 					break;
-				case eCmdISet: case eCmdVset:
+				case eCmdISet:
+					port->current = (port->m_schedule)[i].getCurrent();
+					port->m_callback((port->m_schedule)[i].getCommand(), (port->m_schedule)[i].getCommandLength(), port->m_handle);
+					break;
+				case eCmdVset:
 					port->m_callback((port->m_schedule)[i].getCommand(), (port->m_schedule)[i].getCommandLength(), port->m_handle);
 					break;
 				}
@@ -151,7 +155,11 @@ void PowerController::SendCommand(int port_index, CString& action, CString& valu
 
 	switch (commandModel.getCommandType())
 	{
-	case eCmdISet: case eCmdVset:
+	case eCmdISet:
+		powerport[port_index].current = value;
+		SendCommand((BYTE*)commandModel.getCommand(), commandModel.getCommandLength());
+		break;
+	case eCmdVset:
 		SendCommand((BYTE*)commandModel.getCommand(), commandModel.getCommandLength());
 		break;
 	}
@@ -211,6 +219,17 @@ void PowerController::ResetSchedule(int port_index)
 	{
 		powerport[port_index].ClearSchedule();
 	}
+}
+
+CString PowerController::GetCurrent(int port_index)
+{
+	CString c;
+	if (port_index < GetPortCount())
+	{
+		c = powerport[port_index].GetCurrent();
+	}
+
+	return c;
 }
 
 void PowerController::Command_CB(char* buffer, int len, void* handle)

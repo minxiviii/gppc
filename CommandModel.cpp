@@ -15,7 +15,8 @@ CommandModel::CommandModel(DWORD ch, CString& action, CString& value)
 		double val = _wtof(value);
 		if (val < 0) { val = 0; }
 		else if (val > AMax) { val = AMax; }
-
+		
+		this->current = value;
 		sprintf_s(command, "ISET%d:%.3f\r\n", ch, val);
 		commandLength = strlen(command);
 	}
@@ -39,3 +40,4 @@ DWORD CommandModel::getDelay() { return delayMs; }
 int CommandModel::getCommandType() { return commandType; }
 char* CommandModel::getCommand() { return command; }
 size_t CommandModel::getCommandLength() { return commandLength; }
+CString CommandModel::getCurrent() { return current; }

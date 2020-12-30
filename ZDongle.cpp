@@ -89,6 +89,7 @@ DWORD WINAPI ZDongle::RecvThread(void* data)
 		{
 			while (zdongle->ReadSerial(&onebyte, 1) > 0)
 			{
+				//cout << (int)onebyte << endl;
 				ZDongleData receive_data(onebyte);
 				zdongle->callbackfunc((void*)&receive_data, zdongle->context);
 				

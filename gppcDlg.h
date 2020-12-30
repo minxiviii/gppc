@@ -10,6 +10,15 @@
 #include "ZDongle.h"
 #include "Loadcell.h"
 #include "StepInfo.h"
+#include "csv.h"
+
+const int WM_USEREVENT = (WM_USER + 1);
+enum eUserEvent {
+	kEventReceiveLoadcell = 0,
+	kEventZStart,
+	kEventZReady,
+	kEventZEnd,
+};
 
 enum eStepTableIndex {
 	kStep1 = 0,
@@ -26,6 +35,8 @@ enum eCheckImageCode {
 
 const int kSerialGppCount = 12;
 const int kSerialLoadcellCount = 2;
+
+const string kJsonfile = ".\\gppc.json";
 
 // CgppcDlg 대화 상자
 class CgppcDlg : public CDialogEx
@@ -66,6 +77,9 @@ protected:
 	afx_msg void OnBnClickedButtonSerialAllDisconnect();
 	afx_msg void OnBnClickedButtonTest();
 	afx_msg void OnBnClickedButtonDelayCalc();
+	afx_msg void OnBnClickedButtonLoad();
+	afx_msg void OnBnClickedButtonSave();
+	afx_msg LRESULT OnUserEvent(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 	
 	void Exit();
@@ -79,6 +93,7 @@ protected:
 	void RemoveStepTableRow(const int step_number);
 	void LoadJSonOfSteps();
 	void SaveJSonOfSteps();
+	void UpdateStepGroups();
 
 	// UI - Serial
 	CComboBox combo_gpp[kSerialGppCount];
@@ -104,6 +119,20 @@ protected:
 	static void LoadcellReceiveCB(void* data, void* context);
 
 	// gpp
-	PowerController power_countroller[kSerialGppCount];
+	PowerController power_controller[kSerialGppCount];
 	static void PowerContollerCB(void* data, void* context);
+
+	// step
+	vector<StepGroup> step_groups[kStepMax];
+	vector<StepGroup> step_linear;
+	//unsigned int step_delayms[kStepMax];
+
+	int zStatus;
+
+	void TestStart(BOOL start);
+	void TestAddSchedule();
+	BOOL TestNextGain();
+
+	CSV csv;
+	unsigned int trycount;
 };

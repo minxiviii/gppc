@@ -25,6 +25,7 @@ CgppcDlg::CgppcDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_GPPC_DIALOG, pParent)
 	, test_running(false)
 	, carrier_speed(_T(""))
+	, zStatus(kEventZReady)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -66,6 +67,7 @@ void CgppcDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CgppcDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_MESSAGE(WM_USEREVENT, OnUserEvent)
 	ON_BN_CLICKED(IDCANCEL, &CgppcDlg::OnBnClickedCancel)
 	ON_BN_CLICKED(IDC_BUTTON_S1_ADD_GROUP, &CgppcDlg::OnBnClickedButtonS1AddGroup)
 	ON_BN_CLICKED(IDC_BUTTON_S1_DEL_GROUP, &CgppcDlg::OnBnClickedButtonS1DelGroup)
@@ -80,6 +82,8 @@ BEGIN_MESSAGE_MAP(CgppcDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_SERIAL_ALL_CONNECT, &CgppcDlg::OnBnClickedButtonSerialAllConnect)
 	ON_BN_CLICKED(IDC_BUTTON_SERIAL_ALL_DISCONNECT, &CgppcDlg::OnBnClickedButtonSerialAllDisconnect)
 	ON_BN_CLICKED(IDC_BUTTON_DELAY_CALC, &CgppcDlg::OnBnClickedButtonDelayCalc)
+	ON_BN_CLICKED(IDC_BUTTON_LOAD, &CgppcDlg::OnBnClickedButtonLoad)
+	ON_BN_CLICKED(IDC_BUTTON_SAVE, &CgppcDlg::OnBnClickedButtonSave)
 END_MESSAGE_MAP()
 
 
@@ -96,18 +100,17 @@ BOOL CgppcDlg::OnInitDialog()
 	
 	for (int i = 0; i < kSerialGppCount; i++)
 	{
-		power_countroller[i].Init(i, (i % 6 == 5) ? 1 : 2, PowerContollerCB, this);
+		power_controller[i].Init(i, (i % 6 == 5) ? 1 : 2, PowerContollerCB, this);
 	}
 
 	for (int i = 0; i < kSerialLoadcellCount; i++)
 	{
-		loadcell[i].Init(i, LoadcellReceiveCB, this);
+		loadcell[i].Init(i/*index = id*/, LoadcellReceiveCB, this);
 	}
 
 	zdongle.Init(ZDongleReceiveCB, this);
 
 	InitListCtrls();
-	LoadJSonOfSteps();
 	InitComboSerial();
 
 	carrier_speed = _T("0");
@@ -116,6 +119,8 @@ BOOL CgppcDlg::OnInitDialog()
 		distance[i] = _T("0");
 		delay[i] = _T("0");
 	}
+
+	LoadJSonOfSteps();
 	UpdateData(FALSE);
 
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
@@ -171,9 +176,14 @@ void CgppcDlg::OnBnClickedCancel()
 
 void CgppcDlg::Exit()
 {
+	if (test_running)
+	{
+		test_running = FALSE;
+		TestStart(FALSE);
+	}
 	zdongle.DisconnectSerial();
 	for (int i = 0; i < kSerialLoadcellCount; i++) { loadcell[i].DisconnectSerial(); }
-	for (int i = 0; i < kSerialGppCount; i++) { power_countroller[i].Deinit(); }
+	for (int i = 0; i < kSerialGppCount; i++) { power_controller[i].Deinit(); }
 }
 
 BOOL CgppcDlg::PreTranslateMessage(MSG* pMsg)
@@ -320,9 +330,9 @@ void CgppcDlg::AddStepTableRow(const int step_number, StepGroup* step_group)
 	}
 
 	CString start_current, end_current, interval;
-	start_current = step_group->GetStartCurrent().c_str();
-	end_current = step_group->GetEndCurrent().c_str();
-	interval = step_group->GetInterval().c_str();
+	start_current = step_group->GetStartCurrentText().c_str();
+	end_current = step_group->GetEndCurrentText().c_str();
+	interval = step_group->GetIntervalText().c_str();
 
 	listctrl_of_steptable[step_number].SetItemText(row, col++, start_current);
 	listctrl_of_steptable[step_number].SetItemText(row, col++, end_current);
@@ -352,9 +362,12 @@ void CgppcDlg::RemoveStepTableRow(const int step_number)
 
 afx_msg void CgppcDlg::LoadJSonOfSteps()
 {
-	for (int i = 0; i < kStepMax; i++) { listctrl_of_steptable[i].DeleteAllItems(); }	// Remove All
+	for (int i = 0; i < kStepMax; i++)
+	{ 	
+		listctrl_of_steptable[i].DeleteAllItems();
+	}	// Remove All
 
-	ifstream jsonFile(".\\schedule.json");
+	ifstream jsonFile(kJsonfile);
 
 	Json::CharReaderBuilder builder;
 	builder["collectComments"] = false;
@@ -364,41 +377,53 @@ afx_msg void CgppcDlg::LoadJSonOfSteps()
 	bool ok = parseFromStream(builder, jsonFile, &jsonValue, &errs);
 	if (!ok) { return; }
 
+	const char key_stepinfo[] = "step_info";
 	for (int step = kStep1; step < kStepMax; step++)
 	{
 		string str_step("step_" + to_string(step + 1));
 
 		const char* key_step = str_step.c_str();
 
-		int group_count = jsonValue[key_step].size();
+		int group_count = jsonValue[key_stepinfo][key_step].size();
 		for (int index_group = 0; index_group < group_count; index_group++)
 		{
-			string start = jsonValue[key_step][index_group].get("start", -1).asString();
-			string end = jsonValue[key_step][index_group].get("end", -1).asString();
-			string interval = jsonValue[key_step][index_group].get("interval", -1).asString();
+			string start = jsonValue[key_stepinfo][key_step][index_group].get("start", "").asString();
+			string end = jsonValue[key_stepinfo][key_step][index_group].get("end", "").asString();
+			string interval = jsonValue[key_stepinfo][key_step][index_group].get("interval", "").asString();
 			
-			int member_count = jsonValue[key_step][index_group]["member"].size();
+			int member_count = jsonValue[key_stepinfo][key_step][index_group]["member"].size();
 			vector<int> member;
 			for (int index_member = 0; index_member < member_count; index_member++)
 			{
-				int member_number = jsonValue[key_step][index_group]["member"][index_member].asInt();
+				int member_number = jsonValue[key_stepinfo][key_step][index_group]["member"][index_member].asInt();
 				member.push_back(member_number);
 			}
 						
 			StepGroup step_group(start, end, interval, member);
 			AddStepTableRow(step, &step_group);
 		}
+
+		int distance = jsonValue["delay_info"]["distance"][step].asInt();
+		this->distance[step].Format(_T("%d"), distance);
 	}
+
+	int speed = jsonValue["delay_info"].get("carrier_speed", 0).asInt();
+	this->carrier_speed.Format(_T("%d"), speed);
+	UpdateData(FALSE);
+	OnBnClickedButtonDelayCalc();
 }
 
 void CgppcDlg::SaveJSonOfSteps()
 {
-	
 	ofstream jsonFile;
-	jsonFile.open(".\\schedule.json");
+	jsonFile.open(kJsonfile);
 
 	Json::Value root;
 	
+	Json::Value step_info;
+	Json::Value delay_info;
+
+	UpdateData(TRUE);
 	for (int step = kStep1; step < kStepMax; step++)
 	{	
 		string str_step("step_" + to_string(step + 1));
@@ -424,10 +449,23 @@ void CgppcDlg::SaveJSonOfSteps()
 			group_json["end"] = (string)CT2CA(end_current);
 			group_json["interval"] = (string)CT2CA(interval);
 
-			root[str_step.c_str()].append(group_json);
+			step_info[str_step.c_str()].append(group_json);
 		}
+
+		if (this->distance[step].GetLength() < 1) { this->distance[step] = _T("0"); }
+		int distance = _ttoi(this->distance[step]);
+		delay_info["distance"].append(distance);
 	}
+
+	if (this->carrier_speed.GetLength() < 1) { this->carrier_speed = _T("0"); }
+	int speed = _ttoi(this->carrier_speed);
+	delay_info["carrier_speed"] = speed;
 	
+	UpdateData(FALSE);
+
+	root["step_info"] = step_info;
+	root["delay_info"] = delay_info;
+
 	Json::StreamWriterBuilder builder;
 	builder["commentStyle"] = "None";
 	builder["indentation"] = "	"; // tab
@@ -435,6 +473,41 @@ void CgppcDlg::SaveJSonOfSteps()
 
 	writer->write(root, &jsonFile);
 	jsonFile.close();
+}
+
+void CgppcDlg::UpdateStepGroups()
+{
+	for (int step = kStep1; step < kStepMax; step++)
+	{
+		step_groups[step].clear();
+		int row_count = listctrl_of_steptable[step].GetItemCount();
+		for (int row = 0; row < row_count; row++)
+		{
+			int col = 1;
+			CString group_number = listctrl_of_steptable[step].GetItemText(row, col++);
+
+			vector<int> member;
+			for (int j = 0; j < 22; j++)
+			{
+				BOOL m = listctrl_of_steptable[step].GetCellImage(row, col++);
+				if (m) { member.push_back(j + 1); }
+			}
+
+			CString start_current = listctrl_of_steptable[step].GetItemText(row, col++);
+			CString end_current = listctrl_of_steptable[step].GetItemText(row, col++);
+			CString interval = listctrl_of_steptable[step].GetItemText(row, col);
+
+			string start_text = (string)CT2CA(start_current);
+			string end_text = (string)CT2CA(end_current);
+			string interval_text = (string)CT2CA(interval);
+
+			if (this->delay[step].GetLength() < 1) { this->delay[step] = _T("0"); }
+			int delay = _ttoi(this->delay[step]);
+
+			StepGroup step_group(start_text, end_text, interval_text, member, delay);
+			step_groups[step].push_back(step_group);
+		}
+	}
 }
 
 void CgppcDlg::OnBnClickedButtonS1AddGroup() { AddStepTableRow(kStep1); }
@@ -463,8 +536,8 @@ void CgppcDlg::OnBnClickedButtonDelayCalc()
 		int distance = _ttoi(this->distance[i]);
 		
 
-		double delay = (speed > 0) ? ((double)distance / (double)speed * 1000) : 0;
-		this->delay[i].Format(_T("%.f"), delay);
+		unsigned int delay = (speed > 0) ? ((double)distance / (double)speed * 1000) : 0;
+		this->delay[i].Format(_T("%d"), delay);
 	}
 	
 	UpdateData(FALSE);
@@ -493,25 +566,34 @@ void CgppcDlg::OnBnClickedButtonSerialAllConnect()
 		
 		if (i < kSerialGppCount)
 		{
-			result = power_countroller[i].ConnectSerial(strPort);
-			if (result)
+			if (!power_controller[i].IsOpen())
 			{
-				// 연결되면 모든 연결된 포트에 ALLOUTON 과 VSET 명령을 날린다
-				power_countroller[i].SendCommand((CString)_T("ALLOUTON\r\n"));
-				for (int i = 0; i < power_countroller[i].GetPortCount(); i++)
+				result = power_controller[i].ConnectSerial(strPort);
+				if (result)
 				{
-					power_countroller[i].SendCommand(i, (CString)_T("VSET"), (CString)_T("32.000"));
+					// 연결되면 모든 연결된 포트에 ALLOUTON 과 VSET 명령을 날린다
+					power_controller[i].SendCommand((CString)_T("ALLOUTON\r\n"));
+					for (int j = 0; j < power_controller[i].GetPortCount(); j++)
+					{
+						power_controller[i].SendCommand(j, (CString)_T("VSET"), (CString)_T("32.000"));
+						power_controller[i].SendCommand(j, (CString)_T("ISET"), (CString)_T("0.300"));
+					}
 				}
 			}
 		}
 		else if (i < kSerialGppCount + kSerialLoadcellCount)
 		{
-
-			result = loadcell[i- kSerialGppCount].ConnectSerial(strPort);
+			if (!loadcell[i - kSerialGppCount].IsOpen())
+			{
+				result = loadcell[i - kSerialGppCount].ConnectSerial(strPort);
+			}
 		}
 		else
 		{
-			result = zdongle.ConnectSerial(strPort);
+			if (!zdongle.IsOpen())
+			{
+				result = zdongle.ConnectSerial(strPort);
+			}
 		}
 		
 		//CT2CA pszConvertedAnsiString(strPort);
@@ -534,7 +616,7 @@ void CgppcDlg::OnBnClickedButtonSerialAllDisconnect()
 		BOOL result(FALSE);
 		if (i < kSerialGppCount)
 		{
-			result = power_countroller[i].DisconnectSerial();
+			result = power_controller[i].DisconnectSerial();
 		}
 		else if (i < kSerialGppCount + kSerialLoadcellCount)
 		{
@@ -551,7 +633,12 @@ void CgppcDlg::OnBnClickedButtonSerialAllDisconnect()
 
 void CgppcDlg::OnBnClickedButtonTest()
 {
-	SaveJSonOfSteps();
+	test_running = !test_running;
+	TestStart(test_running);
+}
+
+void CgppcDlg::TestStart(BOOL start)
+{
 	const int ids[] = {
 		IDC_LIST_1, IDC_LIST_2, IDC_LIST_3, IDC_LIST_4,
 		IDC_BUTTON_S1_ADD_GROUP, IDC_BUTTON_S2_ADD_GROUP, IDC_BUTTON_S3_ADD_GROUP, IDC_BUTTON_S4_ADD_GROUP,
@@ -572,56 +659,168 @@ void CgppcDlg::OnBnClickedButtonTest()
 		IDC_BUTTON_SERIAL_ALL_CONNECT, IDC_BUTTON_SERIAL_ALL_DISCONNECT
 	};
 
-	if (test_running)
+	if (start)
 	{
-		
+		trycount = 0;
+		// update step_groups
+		UpdateStepGroups();
+		step_linear.clear();
+		for (int step = kStep1; step < kStepMax; step++)
+		{
+			int row_count = step_groups[step].size();
+			for (int row = 0; row < row_count; row++)
+			{
+				step_linear.push_back(step_groups[step][row]);
+			}
+		}
+
+		csv.Open();
+		string row;
+		row = "index";
+		row += ",time";
+		row += ",m1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11";
+		row += ",m12,m13,m14,m15,m16,m17,m18,m19,m20,m21,m22";
+		row += ",w1,w2,w3,w4,w5,w6";
+		row += ",w7,w8,w9,w10,w11,w12";
+		row += "\n";
+		csv.Write(row);
+		zStatus = kEventZReady;
 	}
 	else
 	{
-
+		zStatus = kEventZReady;
+		for (int i = 0; i < kSerialGppCount; i++)
+		{
+			for (int j = 0; j < power_controller[i].GetPortCount(); j++)
+			{
+				power_controller[i].ResetSchedule(j);
+			}
+		}
+		csv.Close();
 	}
 
 	const int count = sizeof(ids) / sizeof(*ids);
-	for (int i = 0; i < count; i++) { GetDlgItem(ids[i])->EnableWindow(test_running); }
+	for (int i = 0; i < count; i++) { GetDlgItem(ids[i])->EnableWindow(!test_running); }
 	
-	GetDlgItem(IDC_BUTTON_TEST)->SetWindowTextW(test_running ? _T("시험 시작") : _T("시험 중지"));
+	GetDlgItem(IDC_BUTTON_TEST)->SetWindowTextW(test_running ? _T("시험 중지") : _T("시험 시작"));
+}
 
-	test_running = !test_running;
+void CgppcDlg::TestAddSchedule()
+{
+	static CString kISET = _T("ISET");
+	static CString kDelay = _T("DELAY");
+
+	int length = step_linear.size();
+	for (int i = 0; i < length; i++)
+	{
+		float currnet = step_linear[i].GetCurrnet();
+		int delayms = step_linear[i].GetDelayms();
+
+		vector<int> port_number = step_linear[i].GetOutputPorts();
+		for (int j = 0; j < port_number.size(); j++)
+		{
+			int ctrl_index(0);
+			int port_index(0);
+
+			int num = port_number[j];
+			if (num < 12)
+			{
+				num--;
+				ctrl_index = num / 2;
+				port_index = num % 2;
+			}
+			else
+			{
+				num -= 12;
+				ctrl_index = num / 2 + 6;
+				port_index = num % 2;
+			}
+
+			if (power_controller[ctrl_index].IsOpen())
+			{
+				CString iset_value, delay_value;
+				iset_value.Format(_T("%.2f"), currnet);
+				delay_value.Format(_T("%d"), delayms);
+				power_controller[ctrl_index].AddSchedule(port_index, kISET, iset_value);
+				power_controller[ctrl_index].AddSchedule(port_index, kDelay, delay_value);
+			}
+
+			//cout << ctrl_index << "   " << port_index << endl;
+			//cout << "try_idx: " << trycount << " group_idx: " << i + 1 << " currnet: " << currnet << " delay: " << delayms << endl;
+		}
+	}
+}
+
+BOOL CgppcDlg::TestNextGain()
+{
+	BOOL gain(FALSE);
+	int length = step_linear.size();
+	for (int i = 0; i < length && !gain; i++)
+	{
+		if (step_linear[i].IsOver() == FALSE)
+		{
+			step_linear[i].Gain();
+			gain = TRUE;
+
+			for (int j = 0; j < i; j++)
+			{
+				step_linear[j].ResetCurrent();
+			}
+		}
+	}
+
+	return gain;
+}
+
+void CgppcDlg::OnBnClickedButtonLoad()
+{
+	LoadJSonOfSteps();
+}
+
+void CgppcDlg::OnBnClickedButtonSave()
+{
+	SaveJSonOfSteps();
 }
 
 void CgppcDlg::ZDongleReceiveCB(void* data, void* context)
 {
-	static ULONGLONG one, two;
+	CgppcDlg* ctx = (CgppcDlg*)context;
+	if (!ctx->test_running) { return; }
 
-	char id = *(char*)data;
-	CgppcDlg* ctx = (CgppcDlg *)context;
+	static ULONGLONG one, two;
+	ZDongleData* zdata = (ZDongleData*)data;
 	
-	switch (id)
+	//cout << "id : " << zdata->GetId() << endl;
+	switch (zdata->GetId())
 	{
-	case '1':	
+	case 1:	
 		one = GetTickCount64();
 		break;
-	case '2':
+	case 2:
 		two = GetTickCount64();
 		break;
-	case '3':
+	case 4:	// end
 		one = two = 0;
-		//cout << "finish" << endl;
+		cout << endl << "Z : finish" << endl;
+		::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZEnd, (LPARAM)NULL);
 		break;
 	}
 
 	if (one > 0 && two > 0)
 	{
-		if (one < two)
+		if (one < two)	// start
 		{
-			//cout << "start" << endl;
+			cout << endl << "Z : start" << endl;
+			::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZStart, (LPARAM)NULL);
 		}
-		else if (one > two)
+		else if (one > two)	// ready
 		{
-			//cout << "ready" << endl;
+			cout << endl << "Z : ready" << endl;
+			::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZReady, (LPARAM)NULL);
 		}
-		else
+		else // error
 		{
+			cout << endl << "Z : error" << endl;
 			//cout << "err" << endl;
 		}
 
@@ -632,9 +831,133 @@ void CgppcDlg::ZDongleReceiveCB(void* data, void* context)
 void CgppcDlg::LoadcellReceiveCB(void* data, void* context)
 {
 	CgppcDlg* ctx = (CgppcDlg*)context;
+	if (!ctx->test_running || ctx->zStatus != kEventZStart) { return; }
+
+	int id = *(int*)data;
+	if (id == 0)
+	{
+		::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventReceiveLoadcell, (LPARAM)NULL);
+	}
 }
 
 void CgppcDlg::PowerContollerCB(void* data, void* context)
 {
 	CgppcDlg* ctx = (CgppcDlg*)context;
+	if (!ctx->test_running) { return; }
+}
+
+afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
+{
+	int event = (int)wParam;
+
+	if (event == kEventReceiveLoadcell)
+	{
+		if (zStatus != kEventZStart) { return 1; }
+		//cout << "loadcell" << endl;
+
+		SYSTEMTIME st;
+		GetLocalTime(&st);
+
+		string index = to_string(trycount) + ",";
+		CString iset;
+		for (int i = 0; i < kSerialGppCount; i++)
+		{
+			for (int j = 0; j < power_controller[i].GetPortCount(); j++)
+			{
+				CString c = power_controller[i].GetCurrent(j);
+				iset += c;
+				iset += _T(",");
+			}
+		}
+
+		char buf[512] = { 0, };
+		sprintf_s(buf, "%04d.%02d.%02d %02d:%02d:%02d.%d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+		string time = buf;
+
+		//(string)CT2CA(iset.operator LPCWSTR());
+		CT2CA isetvalue(iset);
+		string data = ",";
+		data += isetvalue;
+
+		string weight;// = ",";
+		for (int i = 0; i < kSerialLoadcellCount; i++)
+		{
+			for (int j = 0; j < 6; j++)
+			{
+				int w = loadcell[i].GetWeight(j);
+				weight += to_string(w);
+				if (j < 5) { weight += ","; }
+			}
+
+			if (i < kSerialLoadcellCount - 1) { weight += ","; }
+		}
+
+		string full = index + time + data + weight;
+		cout << full << endl;
+		if (csv.isOpen())
+		{
+			csv.Write(full + "\n");
+		}
+	}
+	else if (event == kEventZStart)
+	{
+		zStatus = event;
+		trycount++;
+		TestAddSchedule();
+		for (int i = 0; i < kSerialGppCount; i++)
+		{
+			for (int j = 0; j < power_controller[i].GetPortCount(); j++)
+			{
+				if (power_controller[i].IsOpen())
+				{
+					power_controller[i].StartScheduler(j);
+				}
+			}
+		}
+	}
+	else if (event == kEventZReady)
+	{
+		zStatus = event;
+		BOOL result = TestNextGain();
+		if (!result)
+		{
+			cout << "Z : END" << endl;
+			test_running = FALSE;
+			TestStart(test_running);
+		}
+
+		for (int i = 0; i < 6; i++)
+		{
+			BOOL result = power_controller[i].IsOpen();
+			if (result)
+			{
+				// 연결되면 모든 연결된 포트에 ALLOUTON 과 VSET 명령을 날린다
+				for (int j = 0; j < power_controller[i].GetPortCount(); j++)
+				{
+					power_controller[i].SendCommand(j, (CString)_T("ISET"), (CString)_T("0.300"));
+				}
+			}
+		}
+	}
+	else if (event == kEventZEnd)
+	{
+		if (zStatus == kEventZEnd) { return 1; }
+		zStatus = event;
+
+		for (int i = 0; i < kSerialGppCount; i++)
+		{
+			BOOL result = power_controller[i].IsOpen();
+			if (result)
+			{
+				power_controller[i].ResetSchedule();
+				// 연결되면 모든 연결된 포트에 ALLOUTON 과 VSET 명령을 날린다
+				for (int j = 0; j < power_controller[i].GetPortCount(); j++)
+				{
+					power_controller[i].SendCommand(j, (CString)_T("ISET"), (CString)_T("0.000"));
+				}
+			}
+		}
+	}
+	
+	return 1;
 }

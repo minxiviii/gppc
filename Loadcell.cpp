@@ -90,7 +90,7 @@ DWORD WINAPI Loadcell::RecvThread(void* data)
 					buffer[receive_length++] = onebyte;
 					if (onebyte == '\r')
 					{
-						int weight[CellCount] = { 0, };
+						//int weight[CellCount] = { 0, };
 						int count = receive_length / DataLenPerCell;
 						for (int i = 0; i < count; i++)
 						{
@@ -100,16 +100,16 @@ DWORD WINAPI Loadcell::RecvThread(void* data)
 								int minus = (buffer[pos + 1] == '-') ? -1 : 1;
 								char data[6] = { 0, };
 								memcpy_s(data, 5, &buffer[pos + 2], 5);
-
-								weight[i] = atoi(data) * minus;
+								int new_w = atoi(data);
+								loadcell->weight[i] = (new_w == 99999 ? 0 : new_w) * minus;
 								//cout << weight[i] << endl;
 							}
 						}
 
 						//aRecvBuf[dwRecvSize] = 0;
 						//cout << count << endl;
-						//cout << (char*)aRecvBuf << endl;
-						//p->RecvPacketCB(aRecvBuf, dwRecvSize-1, p->dlg);
+						//cout << (char*)buffer << endl;
+						loadcell->callbackfunc((void*)&loadcell->id, loadcell->context);
 						receive_length = 0;
 						Sleep(0);
 					}

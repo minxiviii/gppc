@@ -22,11 +22,13 @@
 #define IDC_EDIT_DISTANCE1              1016
 #define IDC_BUTTON_SERIAL_ALL_CONNECT   1017
 #define IDC_BUTTON_DELAY_CALC           1018
+#define IDC_BUTTON_LOAD                 1019
 #define IDC_COMBO_SERIAL2               1020
 #define IDC_COMBO_SERIAL3               1021
 #define IDC_COMBO_SERIAL4               1022
 #define IDC_COMBO_SERIAL5               1023
 #define IDC_COMBO_SERIAL6               1024
+#define IDC_BUTTON_SAVE                 1025
 #define IDC_COMBO_SERIAL13              1031
 #define IDC_BUTTON_SERIAL2              1034
 #define IDC_BUTTON_SERIAL3              1035
@@ -66,7 +68,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        130
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1019
+#define _APS_NEXT_CONTROL_VALUE         1020
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

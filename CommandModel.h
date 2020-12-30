@@ -21,6 +21,7 @@ private:
 	char command[20];
 	size_t commandLength;
 	DWORD delayMs;
+	CString current;
 
 public:
 	CommandModel(DWORD ch, CString& action, CString& value);
@@ -29,4 +30,5 @@ public:
 	int getCommandType();
 	char* getCommand();
 	size_t getCommandLength();
+	CString getCurrent();
 };

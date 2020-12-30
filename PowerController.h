@@ -21,6 +21,8 @@ private:
 	CtrlCommand_CB m_callback;
 	static DWORD WINAPI ScheduleThread(void* data);
 
+	
+
 public:
 	PowerPort(DWORD dwPortNumber, CtrlCommand_CB callback, void* handle, BOOL bEnableLog = TRUE);
 	~PowerPort();
@@ -29,6 +31,8 @@ public:
 	void ClearSchedule();
 	void StartSchedule();
 	void ThreadClose();
+	CString current;
+	CString GetCurrent() { return current; }
 	BOOL isRun() {
 		return m_bStart;
 	}
@@ -60,7 +64,7 @@ public:
 	int GetID();
 	
 	size_t GetPortCount();
-	BOOL ConnectSerial(CString port, CString buadrate = _T("38400"));
+	BOOL ConnectSerial(CString port, CString buadrate = _T("57600"));
 	BOOL DisconnectSerial();
 
 	void SendCommand(int port_index, CString& action, CString& value);
@@ -72,4 +76,6 @@ public:
 	BOOL AddSchedule(int port_index, CString& action, CString& value);
 	void ResetSchedule();
 	void ResetSchedule(int port_index);
+
+	CString GetCurrent(int port_index);
 };
