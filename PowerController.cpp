@@ -25,9 +25,9 @@ void PowerPort::InitSchedule()
 	m_hScheduleThread = CreateThread(NULL, 0, ScheduleThread, this, 0, 0);
 }
 
-void PowerPort::AddSchedule(CString& action, CString& value)
+void PowerPort::AddSchedule(CString& action, CString& value, int step)
 {
-	m_schedule.push_back(CommandModel(m_dwPortNumber, action, value));
+	m_schedule.push_back(CommandModel(m_dwPortNumber, action, value, step));
 }
 
 void PowerPort::ClearSchedule()
@@ -79,10 +79,15 @@ DWORD WINAPI PowerPort::ScheduleThread(void* data)
 				switch ((port->m_schedule)[i].getCommandType())
 				{
 				case eCmdDelay:
-					Sleep((port->m_schedule)[i].getDelay());
+					port->step = (port->m_schedule)[i].getStep();
+					if (port->step < 4)
+					{
+						Sleep((port->m_schedule)[i].getDelay());
+					}
 					break;
 				case eCmdISet:
 					port->current = (port->m_schedule)[i].getCurrent();
+					port->step = (port->m_schedule)[i].getStep();
 					port->m_callback((port->m_schedule)[i].getCommand(), (port->m_schedule)[i].getCommandLength(), port->m_handle);
 					break;
 				case eCmdVset:
@@ -92,6 +97,7 @@ DWORD WINAPI PowerPort::ScheduleThread(void* data)
 			}
 		}
 		port->m_bStart = FALSE;
+		//port->step = 0;
 	}
 
 	return 0;
@@ -187,11 +193,11 @@ void PowerController::StartScheduler(int port_index)
 	}
 }
 
-BOOL PowerController::AddSchedule(int port_index, CString& action, CString& value)
+BOOL PowerController::AddSchedule(int port_index, CString& action, CString& value, int step)
 {
 	if (port_index >= (int)GetPortCount()) { return FALSE; }
 
-	powerport[port_index].AddSchedule(action, value);
+	powerport[port_index].AddSchedule(action, value, step);
 }
 
 void PowerController::ResetSchedule()
@@ -237,4 +243,15 @@ void PowerController::Command_CB(char* buffer, int len, void* handle)
 	PowerController* p = (PowerController*)handle;
 
 	p->WriteSerial((BYTE*)buffer, len);
+}
+
+int PowerController::GetStep(int port_index)
+{
+	int step(0);
+	if (port_index < GetPortCount())
+	{
+		step = powerport[port_index].GetStep();
+	}
+
+	return step;
 }

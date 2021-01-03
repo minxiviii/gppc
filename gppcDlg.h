@@ -11,13 +11,17 @@
 #include "Loadcell.h"
 #include "StepInfo.h"
 #include "csv.h"
+#include "IniConfig.h"
 
 const int WM_USEREVENT = (WM_USER + 1);
+const int USER_TIMER = 1000;
+
 enum eUserEvent {
 	kEventReceiveLoadcell = 0,
 	kEventZStart,
 	kEventZReady,
-	kEventZEnd,
+	kEventZFinish,
+	kEventZIdle,
 };
 
 enum eStepTableIndex {
@@ -79,6 +83,21 @@ protected:
 	afx_msg void OnBnClickedButtonDelayCalc();
 	afx_msg void OnBnClickedButtonLoad();
 	afx_msg void OnBnClickedButtonSave();
+	afx_msg void OnCbnSelchangeComboSerial1();
+	afx_msg void OnCbnSelchangeComboSerial2();
+	afx_msg void OnCbnSelchangeComboSerial3();
+	afx_msg void OnCbnSelchangeComboSerial4();
+	afx_msg void OnCbnSelchangeComboSerial5();
+	afx_msg void OnCbnSelchangeComboSerial6();
+	afx_msg void OnCbnSelchangeComboSerial7();
+	afx_msg void OnCbnSelchangeComboSerial8();
+	afx_msg void OnCbnSelchangeComboSerial9();
+	afx_msg void OnCbnSelchangeComboSerial10();
+	afx_msg void OnCbnSelchangeComboSerial11();
+	afx_msg void OnCbnSelchangeComboSerial12();
+	afx_msg void OnCbnSelchangeComboSerial13();
+	afx_msg void OnCbnSelchangeComboSerial14();
+	afx_msg void OnCbnSelchangeComboSerial15();
 	afx_msg LRESULT OnUserEvent(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 	
@@ -124,15 +143,18 @@ protected:
 
 	// step
 	vector<StepGroup> step_groups[kStepMax];
-	vector<StepGroup> step_linear;
+	vector<StepGroup*> step_linear;
 	//unsigned int step_delayms[kStepMax];
 
 	int zStatus;
 
 	void TestStart(BOOL start);
 	void TestAddSchedule();
+	void TestAddSchedule(int step);
 	BOOL TestNextGain();
 
 	CSV csv;
 	unsigned int trycount;
+	map<CString, int> discovered_serial;
+	void SelchangeComboSerial(const int combobox_number);
 };

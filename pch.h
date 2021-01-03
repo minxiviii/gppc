@@ -11,6 +11,11 @@
 #include "framework.h"
 
 #ifdef _DEBUG
+#define __DEBUG_CONSOLE__
+#endif
+
+#define __DEBUG_CONSOLE__
+#ifdef __DEBUG_CONSOLE__
 #pragma comment(linker, "/entry:WinMainCRTStartup /subsystem:console")
 #include <iostream>
 #endif

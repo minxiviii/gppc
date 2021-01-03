@@ -27,12 +27,14 @@ public:
 	PowerPort(DWORD dwPortNumber, CtrlCommand_CB callback, void* handle, BOOL bEnableLog = TRUE);
 	~PowerPort();
 	void InitSchedule();
-	void AddSchedule(CString& action, CString& value);
+	void AddSchedule(CString& action, CString& value, int step = 0);
 	void ClearSchedule();
 	void StartSchedule();
 	void ThreadClose();
 	CString current;
+	int step;
 	CString GetCurrent() { return current; }
+	int GetStep() { return step; }
 	BOOL isRun() {
 		return m_bStart;
 	}
@@ -73,9 +75,10 @@ public:
 
 	void StartScheduler(int port_index);
 	BOOL isScheduling(int port_index);
-	BOOL AddSchedule(int port_index, CString& action, CString& value);
+	BOOL AddSchedule(int port_index, CString& action, CString& value, int step = 0);
 	void ResetSchedule();
 	void ResetSchedule(int port_index);
 
 	CString GetCurrent(int port_index);
+	int GetStep(int port_index);
 };

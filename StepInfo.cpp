@@ -1,12 +1,13 @@
 #include "pch.h"
 #include "StepInfo.h"
 
-StepGroup::StepGroup(string start_current, string end_current, string interval, vector<int> output_ports, int delayms)
+StepGroup::StepGroup(string start_current, string end_current, string interval, vector<int> output_ports, int delayms, int step)
 	: start_current_text(start_current)
 	, end_current_text(end_current)
 	, interval_text(interval)
 	, output_ports(output_ports)
 	, delayms(delayms)
+	, step(step)
 {
 	if (start_current_text.length() > 0) { this->start_current = stof(start_current_text); }
 	if (end_current_text.length() > 0) { this->end_current = stof(end_current_text); }
@@ -73,4 +74,9 @@ float StepGroup::GetCurrnet()
 int StepGroup::GetDelayms()
 {
 	return delayms;
+}
+
+int StepGroup::GetStep()
+{
+	return step;
 }

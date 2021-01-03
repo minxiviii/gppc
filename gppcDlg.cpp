@@ -12,7 +12,7 @@
 #include ".\CGridListCtrlEx\CGridColumnTraitEdit.h"
 #include ".\CGridListCtrlEx\CGridRowTraitXP.h"
 
-#ifdef _DEBUG
+#ifdef __DEBUG_CONSOLE__
 #define new DEBUG_NEW
 #endif
 
@@ -25,7 +25,7 @@ CgppcDlg::CgppcDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_GPPC_DIALOG, pParent)
 	, test_running(false)
 	, carrier_speed(_T(""))
-	, zStatus(kEventZReady)
+	, zStatus(kEventZIdle)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -84,6 +84,21 @@ BEGIN_MESSAGE_MAP(CgppcDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_DELAY_CALC, &CgppcDlg::OnBnClickedButtonDelayCalc)
 	ON_BN_CLICKED(IDC_BUTTON_LOAD, &CgppcDlg::OnBnClickedButtonLoad)
 	ON_BN_CLICKED(IDC_BUTTON_SAVE, &CgppcDlg::OnBnClickedButtonSave)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL1, &CgppcDlg::OnCbnSelchangeComboSerial1)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL2, &CgppcDlg::OnCbnSelchangeComboSerial2)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL3, &CgppcDlg::OnCbnSelchangeComboSerial3)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL4, &CgppcDlg::OnCbnSelchangeComboSerial4)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL5, &CgppcDlg::OnCbnSelchangeComboSerial5)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL6, &CgppcDlg::OnCbnSelchangeComboSerial6)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL7, &CgppcDlg::OnCbnSelchangeComboSerial7)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL8, &CgppcDlg::OnCbnSelchangeComboSerial8)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL9, &CgppcDlg::OnCbnSelchangeComboSerial9)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL10, &CgppcDlg::OnCbnSelchangeComboSerial10)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL11, &CgppcDlg::OnCbnSelchangeComboSerial11)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL12, &CgppcDlg::OnCbnSelchangeComboSerial12)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL13, &CgppcDlg::OnCbnSelchangeComboSerial13)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL14, &CgppcDlg::OnCbnSelchangeComboSerial14)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL15, &CgppcDlg::OnCbnSelchangeComboSerial15)
 END_MESSAGE_MAP()
 
 
@@ -181,6 +196,7 @@ void CgppcDlg::Exit()
 		test_running = FALSE;
 		TestStart(FALSE);
 	}
+
 	zdongle.DisconnectSerial();
 	for (int i = 0; i < kSerialLoadcellCount; i++) { loadcell[i].DisconnectSerial(); }
 	for (int i = 0; i < kSerialGppCount; i++) { power_controller[i].Deinit(); }
@@ -219,21 +235,43 @@ void CgppcDlg::InitComboSerial()
 			TCHAR szBuffer[MAX_PATH];
 
 			RegQueryValueEx(h_CommKey, i_str, 0, &dwType, (LPBYTE)szBuffer, &dwSize);
-			CString strPort(szBuffer);
+			CString port(szBuffer);
 
-			for (int i = 0; i < kSerialGppCount; i++) { combo_gpp[i].AddString(strPort); }
-			for (int i = 0; i < kSerialLoadcellCount; i++) { combo_loadcell[i].AddString(strPort); }
-			combo_dongle.AddString(strPort);
+			for (int i = 0; i < kSerialGppCount; i++) { combo_gpp[i].AddString(port); }
+			for (int i = 0; i < kSerialLoadcellCount; i++) { combo_loadcell[i].AddString(port); }
+			combo_dongle.AddString(port);
+
+			discovered_serial.insert(pair<CString, int>(port, i+1));
 		}
 
 		Size = MAX_PATH;
 	}
 
 	RegCloseKey(h_CommKey);
+	
+	
+	CString section;
+	for (int i = 0; i < kSerialGppCount; i++)
+	{
+		section.Format(_T("GPP_SERIAL_%d"), i+1);
+		CString port = IniConfig::Read(section, IniConfig::kKeyPort);
 
-	for (int i = 0; i < kSerialGppCount; i++) { combo_gpp[i].SetCurSel(0); }
-	for (int i = 0; i < kSerialLoadcellCount; i++) { combo_loadcell[i].SetCurSel(0); }
-	combo_dongle.SetCurSel(0);
+		int pos = discovered_serial[port];	
+		if (pos > 0) { combo_gpp[i].SetCurSel(pos-1); }
+	}
+	for (int i = 0; i < kSerialLoadcellCount; i++)
+	{
+		section.Format(_T("LOADCELL_SERIAL_%d"), i + 1);
+		CString port = IniConfig::Read(section, IniConfig::kKeyPort);
+
+		int pos = discovered_serial[port];
+		if (pos > 0) { combo_loadcell[i].SetCurSel(pos - 1); }
+	}
+
+	section.Format(_T("ZDONGLE_SERIAL"));
+	CString port = IniConfig::Read(section, IniConfig::kKeyPort);
+	int pos = discovered_serial[port];
+	if (pos > 0) { combo_dongle.SetCurSel(pos - 1); }
 }
 
 /***** Begin UI - Step ******/
@@ -413,6 +451,53 @@ afx_msg void CgppcDlg::LoadJSonOfSteps()
 	OnBnClickedButtonDelayCalc();
 }
 
+void CgppcDlg::OnCbnSelchangeComboSerial1() { SelchangeComboSerial(1); }
+void CgppcDlg::OnCbnSelchangeComboSerial2() { SelchangeComboSerial(2); }
+void CgppcDlg::OnCbnSelchangeComboSerial3() { SelchangeComboSerial(3); }
+void CgppcDlg::OnCbnSelchangeComboSerial4() { SelchangeComboSerial(4); }
+void CgppcDlg::OnCbnSelchangeComboSerial5() { SelchangeComboSerial(5); }
+void CgppcDlg::OnCbnSelchangeComboSerial6() { SelchangeComboSerial(6); }
+void CgppcDlg::OnCbnSelchangeComboSerial7() { SelchangeComboSerial(7); }
+void CgppcDlg::OnCbnSelchangeComboSerial8() { SelchangeComboSerial(8); }
+void CgppcDlg::OnCbnSelchangeComboSerial9() { SelchangeComboSerial(9); }
+void CgppcDlg::OnCbnSelchangeComboSerial10() { SelchangeComboSerial(10); }
+void CgppcDlg::OnCbnSelchangeComboSerial11() { SelchangeComboSerial(11); }
+void CgppcDlg::OnCbnSelchangeComboSerial12() { SelchangeComboSerial(12); }
+void CgppcDlg::OnCbnSelchangeComboSerial13() { SelchangeComboSerial(13); }
+void CgppcDlg::OnCbnSelchangeComboSerial14() { SelchangeComboSerial(14); }
+void CgppcDlg::OnCbnSelchangeComboSerial15() { SelchangeComboSerial(15); }
+
+void CgppcDlg::SelchangeComboSerial(const int combobox_number)
+{
+	const int count = kSerialGppCount + kSerialLoadcellCount + 1;
+	CComboBox* combobox[count] = {
+		&combo_gpp[0],&combo_gpp[1],&combo_gpp[2],&combo_gpp[3],&combo_gpp[4],&combo_gpp[5],
+		&combo_gpp[6],&combo_gpp[7],&combo_gpp[8],&combo_gpp[9],&combo_gpp[10],&combo_gpp[11],
+		&combo_loadcell[0], &combo_loadcell[1], &combo_dongle };
+
+	int i = combobox_number - 1;
+
+	CString port;
+	combobox[i]->GetLBText(combobox[i]->GetCurSel(), port.GetBuffer(combobox[i]->GetLBTextLen(combobox[i]->GetCurSel())));
+	port.ReleaseBuffer();
+
+	CString section;
+	if (combobox_number <= kSerialGppCount)
+	{
+		section.Format(_T("GPP_SERIAL_%d"), combobox_number);
+	}
+	else if (combobox_number <= kSerialGppCount + kSerialLoadcellCount)
+	{
+		section.Format(_T("LOADCELL_SERIAL_%d"), combobox_number - kSerialGppCount);
+	}
+	else
+	{
+		section.Format(_T("ZDONGLE_SERIAL"));
+	}
+
+	IniConfig::Write(section, IniConfig::kKeyPort, port);
+}
+
 void CgppcDlg::SaveJSonOfSteps()
 {
 	ofstream jsonFile;
@@ -504,7 +589,7 @@ void CgppcDlg::UpdateStepGroups()
 			if (this->delay[step].GetLength() < 1) { this->delay[step] = _T("0"); }
 			int delay = _ttoi(this->delay[step]);
 
-			StepGroup step_group(start_text, end_text, interval_text, member, delay);
+			StepGroup step_group(start_text, end_text, interval_text, member, delay, step+1);
 			step_groups[step].push_back(step_group);
 		}
 	}
@@ -598,7 +683,12 @@ void CgppcDlg::OnBnClickedButtonSerialAllConnect()
 		
 		//CT2CA pszConvertedAnsiString(strPort);
 		//cout << pszConvertedAnsiString << " : " << result <<  endl;
-		if (result) { GetDlgItem(ids[i])->SetWindowTextW(_T("연결됨")); }
+		if (result)
+		{ 
+			GetDlgItem(port[i])->EnableWindow(FALSE);
+			GetDlgItem(ids[i])->EnableWindow(FALSE);
+			GetDlgItem(ids[i])->SetWindowTextW(_T("연결됨"));
+		}
 	}
 }
 
@@ -608,6 +698,12 @@ void CgppcDlg::OnBnClickedButtonSerialAllDisconnect()
 		IDC_BUTTON_SERIAL1, IDC_BUTTON_SERIAL2, IDC_BUTTON_SERIAL3, IDC_BUTTON_SERIAL4, IDC_BUTTON_SERIAL5, IDC_BUTTON_SERIAL6,
 		IDC_BUTTON_SERIAL7, IDC_BUTTON_SERIAL8, IDC_BUTTON_SERIAL9, IDC_BUTTON_SERIAL10, IDC_BUTTON_SERIAL11, IDC_BUTTON_SERIAL12,
 		IDC_BUTTON_SERIAL13, IDC_BUTTON_SERIAL14, IDC_BUTTON_SERIAL15,
+	};
+
+	const int port[] = {
+	IDC_COMBO_SERIAL1, IDC_COMBO_SERIAL2, IDC_COMBO_SERIAL3, IDC_COMBO_SERIAL4, IDC_COMBO_SERIAL5, IDC_COMBO_SERIAL6,
+	IDC_COMBO_SERIAL7, IDC_COMBO_SERIAL8, IDC_COMBO_SERIAL9, IDC_COMBO_SERIAL10, IDC_COMBO_SERIAL11, IDC_COMBO_SERIAL12,
+	IDC_COMBO_SERIAL13, IDC_COMBO_SERIAL14, IDC_COMBO_SERIAL15,
 	};
 
 	const int count = sizeof(ids) / sizeof(*ids);
@@ -627,7 +723,12 @@ void CgppcDlg::OnBnClickedButtonSerialAllDisconnect()
 			result = zdongle.DisconnectSerial();
 		}
 
-		if (result) { GetDlgItem(ids[i])->SetWindowTextW(_T("끊어짐")); }
+		if (result)
+		{
+			GetDlgItem(port[i])->EnableWindow(TRUE);
+			GetDlgItem(ids[i])->EnableWindow(TRUE);
+			GetDlgItem(ids[i])->SetWindowTextW(_T("끊어짐"));
+		}
 	}
 }
 
@@ -636,6 +737,7 @@ void CgppcDlg::OnBnClickedButtonTest()
 	test_running = !test_running;
 	TestStart(test_running);
 }
+
 
 void CgppcDlg::TestStart(BOOL start)
 {
@@ -647,7 +749,7 @@ void CgppcDlg::TestStart(BOOL start)
 		IDC_EDIT_SPEED, IDC_BUTTON_DELAY_CALC,
 		IDC_EDIT_DISTANCE1, IDC_EDIT_DISTANCE2, IDC_EDIT_DISTANCE3, IDC_EDIT_DISTANCE4,
 		IDC_EDIT_DELAY1, IDC_EDIT_DELAY2, IDC_EDIT_DELAY3, IDC_EDIT_DELAY4,
-
+/*
 		IDC_COMBO_SERIAL1, IDC_COMBO_SERIAL2, IDC_COMBO_SERIAL3, IDC_COMBO_SERIAL4, IDC_COMBO_SERIAL5, IDC_COMBO_SERIAL6,
 		IDC_COMBO_SERIAL7, IDC_COMBO_SERIAL8, IDC_COMBO_SERIAL9, IDC_COMBO_SERIAL10, IDC_COMBO_SERIAL11, IDC_COMBO_SERIAL12,
 		IDC_COMBO_SERIAL13, IDC_COMBO_SERIAL14, IDC_COMBO_SERIAL15,
@@ -655,7 +757,7 @@ void CgppcDlg::TestStart(BOOL start)
 		IDC_BUTTON_SERIAL1, IDC_BUTTON_SERIAL2, IDC_BUTTON_SERIAL3, IDC_BUTTON_SERIAL4, IDC_BUTTON_SERIAL5, IDC_BUTTON_SERIAL6,
 		IDC_BUTTON_SERIAL7, IDC_BUTTON_SERIAL8, IDC_BUTTON_SERIAL9, IDC_BUTTON_SERIAL10, IDC_BUTTON_SERIAL11, IDC_BUTTON_SERIAL12,
 		IDC_BUTTON_SERIAL13, IDC_BUTTON_SERIAL14, IDC_BUTTON_SERIAL15,
-
+*/
 		IDC_BUTTON_SERIAL_ALL_CONNECT, IDC_BUTTON_SERIAL_ALL_DISCONNECT
 	};
 
@@ -670,7 +772,7 @@ void CgppcDlg::TestStart(BOOL start)
 			int row_count = step_groups[step].size();
 			for (int row = 0; row < row_count; row++)
 			{
-				step_linear.push_back(step_groups[step][row]);
+				step_linear.push_back(&step_groups[step][row]);
 			}
 		}
 
@@ -678,17 +780,23 @@ void CgppcDlg::TestStart(BOOL start)
 		string row;
 		row = "index";
 		row += ",time";
+		row += ",step";
 		row += ",m1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11";
 		row += ",m12,m13,m14,m15,m16,m17,m18,m19,m20,m21,m22";
 		row += ",w1,w2,w3,w4,w5,w6";
 		row += ",w7,w8,w9,w10,w11,w12";
 		row += "\n";
 		csv.Write(row);
-		zStatus = kEventZReady;
+
+		for (int i = kStep1; i < kStepMax; i++) { TestAddSchedule(i); }
+		zStatus = kEventZIdle;
+#ifdef __DEBUG_CONSOLE__
+		cout << endl << "[ TESTING START  -  WAITING FOR SIGNAL ]" << endl;
+#endif
 	}
 	else
 	{
-		zStatus = kEventZReady;
+		zStatus = kEventZIdle;
 		for (int i = 0; i < kSerialGppCount; i++)
 		{
 			for (int j = 0; j < power_controller[i].GetPortCount(); j++)
@@ -697,6 +805,9 @@ void CgppcDlg::TestStart(BOOL start)
 			}
 		}
 		csv.Close();
+#ifdef __DEBUG_CONSOLE__
+		cout << endl << "[ TESTING END ]" << endl;
+#endif
 	}
 
 	const int count = sizeof(ids) / sizeof(*ids);
@@ -705,24 +816,31 @@ void CgppcDlg::TestStart(BOOL start)
 	GetDlgItem(IDC_BUTTON_TEST)->SetWindowTextW(test_running ? _T("시험 중지") : _T("시험 시작"));
 }
 
-void CgppcDlg::TestAddSchedule()
+void CgppcDlg::TestAddSchedule(int step)
 {
 	static CString kISET = _T("ISET");
 	static CString kDelay = _T("DELAY");
 
-	int length = step_linear.size();
-	for (int i = 0; i < length; i++)
-	{
-		float currnet = step_linear[i].GetCurrnet();
-		int delayms = step_linear[i].GetDelayms();
+	CString iset_value, delay_value;
 
-		vector<int> port_number = step_linear[i].GetOutputPorts();
-		for (int j = 0; j < port_number.size(); j++)
+	if (this->delay[step].GetLength() < 1) { this->delay[step] = _T("0"); }
+	int delayms = _ttoi(this->delay[step]);
+	delay_value.Format(_T("%d"), delayms);
+	
+	int row_count = step_groups[step].size();
+
+	for (int row = 0; row < row_count; row++)
+	{
+		float currnet = step_groups[step][row].GetCurrnet();	
+		iset_value.Format(_T("%.2f"), currnet);
+
+		vector<int> port_number = step_groups[step][row].GetOutputPorts();
+		for (int i = 0; i < port_number.size(); i++)
 		{
 			int ctrl_index(0);
 			int port_index(0);
+			int num = port_number[i];
 
-			int num = port_number[j];
 			if (num < 12)
 			{
 				num--;
@@ -738,15 +856,19 @@ void CgppcDlg::TestAddSchedule()
 
 			if (power_controller[ctrl_index].IsOpen())
 			{
-				CString iset_value, delay_value;
-				iset_value.Format(_T("%.2f"), currnet);
-				delay_value.Format(_T("%d"), delayms);
-				power_controller[ctrl_index].AddSchedule(port_index, kISET, iset_value);
-				power_controller[ctrl_index].AddSchedule(port_index, kDelay, delay_value);
+				power_controller[ctrl_index].AddSchedule(port_index, kISET, iset_value, step+1);				
 			}
+		}
+	}
 
-			//cout << ctrl_index << "   " << port_index << endl;
-			//cout << "try_idx: " << trycount << " group_idx: " << i + 1 << " currnet: " << currnet << " delay: " << delayms << endl;
+	for (int i = 0; i < kSerialGppCount; i++)
+	{
+		if (power_controller[i].IsOpen())
+		{
+			for (int j = 0; j < power_controller[i].GetPortCount(); j++)
+			{
+				power_controller[i].AddSchedule(j, kDelay, delay_value, step+1);
+			}
 		}
 	}
 }
@@ -757,14 +879,14 @@ BOOL CgppcDlg::TestNextGain()
 	int length = step_linear.size();
 	for (int i = 0; i < length && !gain; i++)
 	{
-		if (step_linear[i].IsOver() == FALSE)
+		if (step_linear[i]->IsOver() == FALSE)
 		{
-			step_linear[i].Gain();
+			step_linear[i]->Gain();
 			gain = TRUE;
 
 			for (int j = 0; j < i; j++)
 			{
-				step_linear[j].ResetCurrent();
+				step_linear[j]->ResetCurrent();
 			}
 		}
 	}
@@ -789,8 +911,7 @@ void CgppcDlg::ZDongleReceiveCB(void* data, void* context)
 
 	static ULONGLONG one, two;
 	ZDongleData* zdata = (ZDongleData*)data;
-	
-	//cout << "id : " << zdata->GetId() << endl;
+
 	switch (zdata->GetId())
 	{
 	case 1:	
@@ -799,10 +920,10 @@ void CgppcDlg::ZDongleReceiveCB(void* data, void* context)
 	case 2:
 		two = GetTickCount64();
 		break;
-	case 4:	// end
+	case 4:	// finish
+		if (ctx->zStatus != kEventZStart) { return; }
 		one = two = 0;
-		cout << endl << "Z : finish" << endl;
-		::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZEnd, (LPARAM)NULL);
+		::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZFinish, (LPARAM)NULL);
 		break;
 	}
 
@@ -810,18 +931,17 @@ void CgppcDlg::ZDongleReceiveCB(void* data, void* context)
 	{
 		if (one < two)	// start
 		{
-			cout << endl << "Z : start" << endl;
 			::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZStart, (LPARAM)NULL);
 		}
 		else if (one > two)	// ready
 		{
-			cout << endl << "Z : ready" << endl;
 			::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZReady, (LPARAM)NULL);
 		}
 		else // error
 		{
-			cout << endl << "Z : error" << endl;
-			//cout << "err" << endl;
+#ifdef __DEBUG_CONSOLE__
+			cout << endl << "[ Z-ERROR ]" << endl;
+#endif
 		}
 
 		one = two = 0;
@@ -852,26 +972,29 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 
 	if (event == kEventReceiveLoadcell)
 	{
-		if (zStatus != kEventZStart) { return 1; }
-		//cout << "loadcell" << endl;
-
 		SYSTEMTIME st;
 		GetLocalTime(&st);
 
 		string index = to_string(trycount) + ",";
+		int step_value(0);
+		
 		CString iset;
 		for (int i = 0; i < kSerialGppCount; i++)
 		{
 			for (int j = 0; j < power_controller[i].GetPortCount(); j++)
-			{
+			{			
+				if (step_value == 0) { step_value = power_controller[i].GetStep(j); }
+
 				CString c = power_controller[i].GetCurrent(j);
 				iset += c;
 				iset += _T(",");
 			}
 		}
 
+		string step = "," + to_string(step_value);
+
 		char buf[512] = { 0, };
-		sprintf_s(buf, "%04d.%02d.%02d %02d:%02d:%02d.%d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+		sprintf_s(buf, "%04d.%02d.%02d %02d:%02d:%02d.%.3d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 		string time = buf;
 
 		//(string)CT2CA(iset.operator LPCWSTR());
@@ -892,8 +1015,10 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 			if (i < kSerialLoadcellCount - 1) { weight += ","; }
 		}
 
-		string full = index + time + data + weight;
-		cout << full << endl;
+		string full = index + time + step + data + weight;
+#ifdef __DEBUG_CONSOLE__
+		cout << "[ STEP - " << step_value << " ] " << full << endl;
+#endif
 		if (csv.isOpen())
 		{
 			csv.Write(full + "\n");
@@ -903,7 +1028,10 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 	{
 		zStatus = event;
 		trycount++;
-		TestAddSchedule();
+#ifdef __DEBUG_CONSOLE__
+		cout << endl << "[ Z-START ] : Try Count " << trycount << endl;
+#endif
+		//TestAddSchedule();
 		for (int i = 0; i < kSerialGppCount; i++)
 		{
 			for (int j = 0; j < power_controller[i].GetPortCount(); j++)
@@ -921,10 +1049,17 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 		BOOL result = TestNextGain();
 		if (!result)
 		{
-			cout << "Z : END" << endl;
+#ifdef __DEBUG_CONSOLE__
+			cout << endl << "[ Z-END ]" << endl;
+#endif
 			test_running = FALSE;
 			TestStart(test_running);
+			return 1;
 		}
+
+#ifdef __DEBUG_CONSOLE__
+		cout << endl << "[ Z-READY ]" << endl;
+#endif
 
 		for (int i = 0; i < 6; i++)
 		{
@@ -938,11 +1073,16 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 				}
 			}
 		}
+
+		for (int i = kStep1; i < kStepMax; i++) { TestAddSchedule(i); }
 	}
-	else if (event == kEventZEnd)
+	else if (event == kEventZFinish)
 	{
-		if (zStatus == kEventZEnd) { return 1; }
+		if (zStatus == kEventZFinish) { return 1; }
 		zStatus = event;
+#ifdef __DEBUG_CONSOLE__
+		cout << endl << "[ Z-FINISH ]" << endl;
+#endif
 
 		for (int i = 0; i < kSerialGppCount; i++)
 		{

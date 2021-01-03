@@ -2,7 +2,7 @@
 #include "CommandModel.h"
 
 /********************* CommandModel *********************/
-CommandModel::CommandModel(DWORD ch, CString& action, CString& value)
+CommandModel::CommandModel(DWORD ch, CString& action, CString& value, int step) : step(step)
 {
 	if (action.CompareNoCase(arrCommands[eCmdDelay]) == 0)
 	{
@@ -17,6 +17,7 @@ CommandModel::CommandModel(DWORD ch, CString& action, CString& value)
 		else if (val > AMax) { val = AMax; }
 		
 		this->current = value;
+		
 		sprintf_s(command, "ISET%d:%.3f\r\n", ch, val);
 		commandLength = strlen(command);
 	}
@@ -41,3 +42,5 @@ int CommandModel::getCommandType() { return commandType; }
 char* CommandModel::getCommand() { return command; }
 size_t CommandModel::getCommandLength() { return commandLength; }
 CString CommandModel::getCurrent() { return current; }
+
+int CommandModel::getStep() { return step; }

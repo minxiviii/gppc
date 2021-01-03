@@ -22,13 +22,15 @@ private:
 	size_t commandLength;
 	DWORD delayMs;
 	CString current;
+	int step;
 
 public:
-	CommandModel(DWORD ch, CString& action, CString& value);
+	CommandModel(DWORD ch, CString& action, CString& value, int step = 0);
 
 	DWORD getDelay();
 	int getCommandType();
 	char* getCommand();
 	size_t getCommandLength();
 	CString getCurrent();
+	int getStep();
 };
