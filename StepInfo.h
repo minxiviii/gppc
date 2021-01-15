@@ -21,7 +21,7 @@ private:
 	int step;
 
 	vector<int> output_ports;
-	StepGroup() {}
+	StepGroup();
 
 public:
 	StepGroup(string start_current, string end_current, string interval, vector<int> output_ports, int delayms = 0, int step = 0);

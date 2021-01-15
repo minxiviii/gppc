@@ -11,26 +11,26 @@ enum {
 
 const float VMax = 32.0f;
 const float AMax = 6.2f;
-const CString arrCommands[CommandsCount] = { _T("DELAY"), _T("ISET"), _T("VSET") };
-
+const string arrCommands[CommandsCount] = { "DELAY", "ISET", "VSET" };
 
 class CommandModel
 {
 private:
 	int commandType;
 	char command[20];
-	size_t commandLength;
-	DWORD delayMs;
-	CString current;
+	int commandLength;
+	uint32_t delayMs;
+
+	string current;
 	int step;
 
 public:
-	CommandModel(DWORD ch, CString& action, CString& value, int step = 0);
+	CommandModel(const uint32_t ch, const string& action, const string& value, int step = 0);
 
-	DWORD getDelay();
+	uint32_t getDelay();
 	int getCommandType();
 	char* getCommand();
-	size_t getCommandLength();
-	CString getCurrent();
+	int getCommandLength();
+	string getCurrent();
 	int getStep();
 };

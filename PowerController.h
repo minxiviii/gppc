@@ -8,36 +8,33 @@ class PowerPort
 {
 private:
 	PowerPort();
-	DWORD m_dwPortNumber;
+	uint32_t m_dwPortNumber;
 	vector<CommandModel> m_schedule;
 
 	HANDLE m_hScheduleThread;
 	HANDLE m_hSemaphore;
 	BOOL m_bThreadRun;
-	BOOL m_bEnableLog;
 	BOOL m_bStart;
+
+	string current;
+	int step;
 
 	void* m_handle;
 	CtrlCommand_CB m_callback;
 	static DWORD WINAPI ScheduleThread(void* data);
 
-	
-
 public:
-	PowerPort(DWORD dwPortNumber, CtrlCommand_CB callback, void* handle, BOOL bEnableLog = TRUE);
+	PowerPort(uint32_t dwPortNumber, CtrlCommand_CB callback, void* handle);
 	~PowerPort();
 	void InitSchedule();
-	void AddSchedule(CString& action, CString& value, int step = 0);
+	void AddSchedule(const string& action, const string& value, int step = 0);
 	void ClearSchedule();
 	void StartSchedule();
 	void ThreadClose();
-	CString current;
-	int step;
-	CString GetCurrent() { return current; }
-	int GetStep() { return step; }
-	BOOL isRun() {
-		return m_bStart;
-	}
+	string GetCurrent();
+	void SetCurrent(const string& current);
+	int GetStep();
+	BOOL isRun();
 };
 
 /*********************    PowerController    *********************/
@@ -47,11 +44,6 @@ private:
 	int id;
 	void* context;
 	CallbackFunc callbackfunc;
-
-	BOOL thread_run;
-	HANDLE recv_thread;
-	static DWORD WINAPI RecvThread(void* data);
-	void ThreadClose();
 
 	vector<PowerPort> powerport;
 	static void Command_CB(char* buffer, int len, void* handle);
@@ -65,20 +57,20 @@ public:
 
 	int GetID();
 	
-	size_t GetPortCount();
+	int GetPortCount();
 	BOOL ConnectSerial(CString port, CString buadrate = _T("57600"));
 	BOOL DisconnectSerial();
 
-	void SendCommand(int port_index, CString& action, CString& value);
-	void SendCommand(CString& command);
+	void SendCommand(const int port_index, const string& action, const string& value);
+	void SendCommand(const string& command);
 	void SendCommand(BYTE* buffer, int len);
 
 	void StartScheduler(int port_index);
 	BOOL isScheduling(int port_index);
-	BOOL AddSchedule(int port_index, CString& action, CString& value, int step = 0);
+	BOOL AddSchedule(int port_index, const string& action, const string& value, int step = 0);
 	void ResetSchedule();
 	void ResetSchedule(int port_index);
 
-	CString GetCurrent(int port_index);
+	string GetCurrent(int port_index);
 	int GetStep(int port_index);
 };

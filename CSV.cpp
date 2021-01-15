@@ -20,7 +20,7 @@ void CSV::Write(const string& str)
 	if (m_hCSV == INVALID_HANDLE_VALUE) { return; }
 
 	DWORD written;
-	WriteFile(m_hCSV, str.c_str(), str.length(), &written, NULL);
+	WriteFile(m_hCSV, str.c_str(), (DWORD)str.length(), &written, NULL);
 }
 
 

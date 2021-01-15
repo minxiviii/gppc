@@ -16,6 +16,17 @@
 #define new DEBUG_NEW
 #endif
 
+template<typename ... Args>
+std::string string_format(const std::string& format, Args ... args)
+{
+	size_t size = snprintf(nullptr, 0, format.c_str(), args ...) + 1; // Extra space for '\0'
+	if (size <= 0) { throw std::runtime_error("Error during formatting."); }
+	std::unique_ptr<char[]> buf(new char[size]);
+	snprintf(buf.get(), size, format.c_str(), args ...);
+	return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside 
+}
+
+
 
 // CgppcDlg 대화 상자
 
@@ -657,11 +668,11 @@ void CgppcDlg::OnBnClickedButtonSerialAllConnect()
 				if (result)
 				{
 					// 연결되면 모든 연결된 포트에 ALLOUTON 과 VSET 명령을 날린다
-					power_controller[i].SendCommand((CString)_T("ALLOUTON\r\n"));
+					power_controller[i].SendCommand("ALLOUTON\r\n");
 					for (int j = 0; j < power_controller[i].GetPortCount(); j++)
 					{
-						power_controller[i].SendCommand(j, (CString)_T("VSET"), (CString)_T("32.000"));
-						power_controller[i].SendCommand(j, (CString)_T("ISET"), (CString)_T("0.300"));
+						power_controller[i].SendCommand(j, "VSET", "32.000");
+						power_controller[i].SendCommand(j, "ISET", "0.300");
 					}
 				}
 			}
@@ -818,21 +829,23 @@ void CgppcDlg::TestStart(BOOL start)
 
 void CgppcDlg::TestAddSchedule(int step)
 {
-	static CString kISET = _T("ISET");
-	static CString kDelay = _T("DELAY");
+	static const string kISET = "ISET";
+	static const string kDelay = "DELAY";
 
-	CString iset_value, delay_value;
+	string iset_value, delay_value;
 
 	if (this->delay[step].GetLength() < 1) { this->delay[step] = _T("0"); }
 	int delayms = _ttoi(this->delay[step]);
-	delay_value.Format(_T("%d"), delayms);
+	delay_value = string_format("%d", delayms);
+	//delay_value.Format(_T("%d"), delayms);
 	
 	int row_count = step_groups[step].size();
 
 	for (int row = 0; row < row_count; row++)
 	{
 		float currnet = step_groups[step][row].GetCurrnet();	
-		iset_value.Format(_T("%.2f"), currnet);
+		//iset_value.Format(_T("%.2f"), currnet);
+		iset_value = string_format("%.2f", currnet);
 
 		vector<int> port_number = step_groups[step][row].GetOutputPorts();
 		for (int i = 0; i < port_number.size(); i++)
@@ -935,7 +948,7 @@ void CgppcDlg::ZDongleReceiveCB(void* data, void* context)
 		}
 		else if (one > two)	// ready
 		{
-			::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZReady, (LPARAM)NULL);
+			//::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZReady, (LPARAM)NULL);
 		}
 		else // error
 		{
@@ -968,41 +981,42 @@ void CgppcDlg::PowerContollerCB(void* data, void* context)
 
 afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 {
-	int event = (int)wParam;
+	static const int stepfull_length = 10240;
+	static string stepfull(stepfull_length, '\0');
 
+	int event = (int)wParam;
 	if (event == kEventReceiveLoadcell)
 	{
 		SYSTEMTIME st;
 		GetLocalTime(&st);
 
-		string index = to_string(trycount) + ",";
-		int step_value(0);
+		// index
+		string index = to_string(trycount);
+
+		// time
+		char time_buf[32] = { 0, };
+		sprintf_s(time_buf, "%04d.%02d.%02d %02d:%02d:%02d.%.3d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+		string time = time_buf;
 		
-		CString iset;
+		int step_value(0);
+		string current;	// current
 		for (int i = 0; i < kSerialGppCount; i++)
 		{
-			for (int j = 0; j < power_controller[i].GetPortCount(); j++)
+			int port_count = power_controller[i].GetPortCount();
+			for (int j = 0; j < port_count; j++)
 			{			
 				if (step_value == 0) { step_value = power_controller[i].GetStep(j); }
-
-				CString c = power_controller[i].GetCurrent(j);
-				iset += c;
-				iset += _T(",");
+				
+				current += power_controller[i].GetCurrent(j);
+				current += ",";
 			}
 		}
 
-		string step = "," + to_string(step_value);
-
-		char buf[512] = { 0, };
-		sprintf_s(buf, "%04d.%02d.%02d %02d:%02d:%02d.%.3d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
-		string time = buf;
-
-		//(string)CT2CA(iset.operator LPCWSTR());
-		CT2CA isetvalue(iset);
-		string data = ",";
-		data += isetvalue;
-
-		string weight;// = ",";
+		// step
+		string step = to_string(step_value);
+		
+		// weight
+		string weight;
 		for (int i = 0; i < kSerialLoadcellCount; i++)
 		{
 			for (int j = 0; j < 6; j++)
@@ -1015,14 +1029,12 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 			if (i < kSerialLoadcellCount - 1) { weight += ","; }
 		}
 
-		string full = index + time + step + data + weight;
+		string line = index + "," + time + "," + step + "," + current + weight + "\n";
+		stepfull += line;
+
 #ifdef __DEBUG_CONSOLE__
-		cout << "[ STEP - " << step_value << " ] " << full << endl;
+		cout << "[ STEP - " << step_value << " ] " << line;
 #endif
-		if (csv.isOpen())
-		{
-			csv.Write(full + "\n");
-		}
 	}
 	else if (event == kEventZStart)
 	{
@@ -1069,7 +1081,7 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 				// 연결되면 모든 연결된 포트에 ALLOUTON 과 VSET 명령을 날린다
 				for (int j = 0; j < power_controller[i].GetPortCount(); j++)
 				{
-					power_controller[i].SendCommand(j, (CString)_T("ISET"), (CString)_T("0.300"));
+					power_controller[i].SendCommand(j, "ISET", "0.300");
 				}
 			}
 		}
@@ -1093,10 +1105,40 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 				// 연결되면 모든 연결된 포트에 ALLOUTON 과 VSET 명령을 날린다
 				for (int j = 0; j < power_controller[i].GetPortCount(); j++)
 				{
-					power_controller[i].SendCommand(j, (CString)_T("ISET"), (CString)_T("0.000"));
+					if (i < 6)
+					{
+						// 1 ~ 6번 까지는 0.3, Ready 상태가 사라지면서 추가됨
+						power_controller[i].SendCommand(j, "ISET", "0.300");
+					}
+					else
+					{
+						power_controller[i].SendCommand(j, "ISET", "0.000");
+					}
+					
 				}
 			}
 		}
+
+		if (csv.isOpen())
+		{
+			csv.Write(stepfull);
+		}
+
+		stepfull.reserve(stepfull_length);
+		stepfull.clear();
+
+		BOOL result = TestNextGain();
+		if (!result)
+		{
+#ifdef __DEBUG_CONSOLE__
+			cout << endl << "[ Z-END ]" << endl;
+#endif
+			test_running = FALSE;
+			TestStart(test_running);
+			return 1;
+		}
+
+		for (int i = kStep1; i < kStepMax; i++) { TestAddSchedule(i); }
 	}
 	
 	return 1;

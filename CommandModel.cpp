@@ -2,34 +2,37 @@
 #include "CommandModel.h"
 
 /********************* CommandModel *********************/
-CommandModel::CommandModel(DWORD ch, CString& action, CString& value, int step) : step(step)
+CommandModel::CommandModel(const uint32_t ch, const string& action, const string& value, int step)
+	: step(step)
+	, commandLength(0)
+	, delayMs(0)
 {
-	if (action.CompareNoCase(arrCommands[eCmdDelay]) == 0)
+	if (action.compare(arrCommands[eCmdDelay]) == 0)
 	{
 		this->commandType = eCmdDelay;
-		delayMs = (DWORD)_ttoi(value);
+		delayMs = atoi(value.c_str());
 	}
-	else if (action.CompareNoCase(arrCommands[eCmdISet]) == 0)
+	else if (action.compare(arrCommands[eCmdISet]) == 0)
 	{
 		this->commandType = eCmdISet;
-		double val = _wtof(value);
+		double val = atof(value.c_str());
 		if (val < 0) { val = 0; }
 		else if (val > AMax) { val = AMax; }
 		
 		this->current = value;
 		
 		sprintf_s(command, "ISET%d:%.3f\r\n", ch, val);
-		commandLength = strlen(command);
+		commandLength = (int)strlen(command);
 	}
-	else if (action.CompareNoCase(arrCommands[eCmdVset]) == 0)
+	else if (action.compare(arrCommands[eCmdVset]) == 0)
 	{
 		this->commandType = eCmdVset;
-		double val = _wtof(value);
+		double val = atof(value.c_str());
 		if (val < 0) { val = 0; }
 		else if (val > VMax) { val = VMax; }
 
 		sprintf_s(command, "VSET%d:%.3f\r\n", ch, val);
-		commandLength = strlen(command);
+		commandLength = (int)strlen(command);
 	}
 	else
 	{
@@ -37,10 +40,9 @@ CommandModel::CommandModel(DWORD ch, CString& action, CString& value, int step) 
 	}
 }
 
-DWORD CommandModel::getDelay() { return delayMs; }
+uint32_t CommandModel::getDelay() { return delayMs; }
 int CommandModel::getCommandType() { return commandType; }
 char* CommandModel::getCommand() { return command; }
-size_t CommandModel::getCommandLength() { return commandLength; }
-CString CommandModel::getCurrent() { return current; }
-
+int CommandModel::getCommandLength() { return commandLength; }
+string CommandModel::getCurrent() { return current; }
 int CommandModel::getStep() { return step; }

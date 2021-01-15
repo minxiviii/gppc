@@ -1,18 +1,39 @@
 #include "pch.h"
 #include "StepInfo.h"
 
+StepGroup::StepGroup() 
+	: start_current_text("")
+	, end_current_text("")
+	, interval_text("")
+	, output_ports(0)
+	, start_current(0)
+	, end_current(0)
+	, interval(0)
+	, dec_start(0)
+	, dec_end(0)
+	, iter(0)
+	, gain(0)
+	, delayms(0)
+	, step(0) {}
+
 StepGroup::StepGroup(string start_current, string end_current, string interval, vector<int> output_ports, int delayms, int step)
 	: start_current_text(start_current)
 	, end_current_text(end_current)
 	, interval_text(interval)
 	, output_ports(output_ports)
+	, start_current(0)
+	, end_current(0)
+	, interval(0)
+	, dec_start(0)
+	, dec_end(0)
+	, iter(0)
+	, gain(0)
 	, delayms(delayms)
 	, step(step)
 {
 	if (start_current_text.length() > 0) { this->start_current = stof(start_current_text); }
 	if (end_current_text.length() > 0) { this->end_current = stof(end_current_text); }
 	if (interval_text.length() > 0) { this->interval = stof(interval_text); }
-
 
 	dec_start = (int)(this->start_current * 100.0f);
 	dec_end = (int)(this->end_current * 100.0f);

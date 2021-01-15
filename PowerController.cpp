@@ -2,11 +2,10 @@
 #include "PowerController.h"
 
 /********************* PowerPort *********************/
-PowerPort::PowerPort(DWORD dwPortNumber, CtrlCommand_CB callback, void* handle, BOOL bEnableLog)
+PowerPort::PowerPort(uint32_t dwPortNumber, CtrlCommand_CB callback, void* handle)
 	: m_dwPortNumber(dwPortNumber)
 	, m_callback(callback)
 	, m_handle(handle)
-	, m_bEnableLog(bEnableLog)
 	, m_bThreadRun(FALSE)
 	, m_hSemaphore(INVALID_HANDLE_VALUE)
 	, m_hScheduleThread(INVALID_HANDLE_VALUE)
@@ -25,12 +24,12 @@ void PowerPort::InitSchedule()
 	m_hScheduleThread = CreateThread(NULL, 0, ScheduleThread, this, 0, 0);
 }
 
-void PowerPort::AddSchedule(CString& action, CString& value, int step)
+void PowerPort::AddSchedule(const string& action, const string& value, int step)
 {
 	m_schedule.push_back(CommandModel(m_dwPortNumber, action, value, step));
 }
 
-void PowerPort::ClearSchedule()
+inline void PowerPort::ClearSchedule()
 {
 	m_schedule.clear();
 }
@@ -63,6 +62,11 @@ void PowerPort::ThreadClose()
 	CloseHandle(m_hSemaphore);
 	m_hSemaphore = m_hScheduleThread = INVALID_HANDLE_VALUE;
 }
+
+inline string PowerPort::GetCurrent() { return current; }
+inline int PowerPort::GetStep() { return step; }
+inline BOOL PowerPort::isRun() { return m_bStart; }
+inline void PowerPort::SetCurrent(const string& current) { this->current = current; }
 
 DWORD WINAPI PowerPort::ScheduleThread(void* data)
 {
@@ -110,8 +114,6 @@ PowerController::~PowerController() { Deinit(); }
 void PowerController::Init(int id, int port_count, CallbackFunc cb, void* ctx)
 {
 	this->id = id;
-	this->recv_thread = INVALID_HANDLE_VALUE;
-	this->thread_run = FALSE;
 	this->callbackfunc = cb;
 	this->context = ctx;
 
@@ -130,9 +132,9 @@ void PowerController::Deinit()
 	ClosePort();
 }
 
-size_t PowerController::GetPortCount()
+inline int PowerController::GetPortCount()
 {
-	return powerport.size();
+	return (int)powerport.size();
 }
 
 BOOL PowerController::ConnectSerial(CString port, CString buadrate)
@@ -155,14 +157,15 @@ BOOL PowerController::DisconnectSerial()
 
 int PowerController::GetID() { return id; }
 
-void PowerController::SendCommand(int port_index, CString& action, CString& value)
+void PowerController::SendCommand(const int port_index, const string& action, const string& value)
 {
 	CommandModel commandModel = CommandModel(port_index + 1, action, value);
 
 	switch (commandModel.getCommandType())
 	{
 	case eCmdISet:
-		powerport[port_index].current = value;
+		powerport[port_index].SetCurrent(value);
+		//powerport[port_index].current = value;
 		SendCommand((BYTE*)commandModel.getCommand(), commandModel.getCommandLength());
 		break;
 	case eCmdVset:
@@ -171,13 +174,9 @@ void PowerController::SendCommand(int port_index, CString& action, CString& valu
 	}
 }
 
-void PowerController::SendCommand(CString& command)
+void PowerController::SendCommand(const string& command)
 {
-	int len = command.GetLength();
-	char* cmd = new char[len + 1];
-	WideCharToMultiByte(CP_ACP, 0, command, -1, cmd, len + 1, NULL, NULL);
-
-	SendCommand((BYTE*)cmd, len);
+	SendCommand((BYTE*)command.c_str(), command.length());
 }
 
 void PowerController::SendCommand(BYTE* buffer, int len)
@@ -193,7 +192,7 @@ void PowerController::StartScheduler(int port_index)
 	}
 }
 
-BOOL PowerController::AddSchedule(int port_index, CString& action, CString& value, int step)
+BOOL PowerController::AddSchedule(const int port_index, const string& action, const string& value, int step)
 {
 	if (port_index >= (int)GetPortCount()) { return FALSE; }
 
@@ -210,13 +209,7 @@ void PowerController::ResetSchedule()
 
 BOOL PowerController::isScheduling(int port_index)
 {
-	BOOL rst = FALSE;
-	if (port_index < GetPortCount())
-	{
-	   rst = powerport[port_index].isRun();
-	}
-
-	return rst;
+	return (port_index < GetPortCount()) ? powerport[port_index].isRun() : FALSE;
 }
 
 void PowerController::ResetSchedule(int port_index)
@@ -227,31 +220,19 @@ void PowerController::ResetSchedule(int port_index)
 	}
 }
 
-CString PowerController::GetCurrent(int port_index)
+string PowerController::GetCurrent(int port_index)
 {
-	CString c;
-	if (port_index < GetPortCount())
-	{
-		c = powerport[port_index].GetCurrent();
-	}
-
-	return c;
+	static string empty;
+	return (port_index < GetPortCount()) ? powerport[port_index].GetCurrent() : empty;
 }
 
 void PowerController::Command_CB(char* buffer, int len, void* handle)
 {
 	PowerController* p = (PowerController*)handle;
-
 	p->WriteSerial((BYTE*)buffer, len);
 }
 
 int PowerController::GetStep(int port_index)
 {
-	int step(0);
-	if (port_index < GetPortCount())
-	{
-		step = powerport[port_index].GetStep();
-	}
-
-	return step;
+	return (port_index < GetPortCount()) ? powerport[port_index].GetStep() : 0;
 }
