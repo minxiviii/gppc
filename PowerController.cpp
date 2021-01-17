@@ -84,10 +84,7 @@ DWORD WINAPI PowerPort::ScheduleThread(void* data)
 				{
 				case eCmdDelay:
 					port->step = (port->m_schedule)[i].getStep();
-					if (port->step < 4)
-					{
-						Sleep((port->m_schedule)[i].getDelay());
-					}
+					Sleep((port->m_schedule)[i].getDelay());					
 					break;
 				case eCmdISet:
 					port->current = (port->m_schedule)[i].getCurrent();

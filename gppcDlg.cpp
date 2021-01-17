@@ -16,6 +16,9 @@
 #define new DEBUG_NEW
 #endif
 
+static const int kStepfullLength = 10240;
+static string stepfull(kStepfullLength, '\0');
+
 template<typename ... Args>
 std::string string_format(const std::string& format, Args ... args)
 {
@@ -26,12 +29,7 @@ std::string string_format(const std::string& format, Args ... args)
 	return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside 
 }
 
-
-
 // CgppcDlg 대화 상자
-
-
-
 CgppcDlg::CgppcDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_GPPC_DIALOG, pParent)
 	, test_running(false)
@@ -745,10 +743,10 @@ void CgppcDlg::OnBnClickedButtonSerialAllDisconnect()
 
 void CgppcDlg::OnBnClickedButtonTest()
 {
+	stepfull.clear();
 	test_running = !test_running;
 	TestStart(test_running);
 }
-
 
 void CgppcDlg::TestStart(BOOL start)
 {
@@ -981,9 +979,6 @@ void CgppcDlg::PowerContollerCB(void* data, void* context)
 
 afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 {
-	static const int stepfull_length = 10240;
-	static string stepfull(stepfull_length, '\0');
-
 	int event = (int)wParam;
 	if (event == kEventReceiveLoadcell)
 	{
@@ -1124,7 +1119,6 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 			csv.Write(stepfull);
 		}
 
-		stepfull.reserve(stepfull_length);
 		stepfull.clear();
 
 		BOOL result = TestNextGain();
