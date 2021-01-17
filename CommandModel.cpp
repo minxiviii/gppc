@@ -11,6 +11,7 @@ CommandModel::CommandModel(const uint32_t ch, const string& action, const string
 	{
 		this->commandType = eCmdDelay;
 		delayMs = atoi(value.c_str());
+		//cout << "step = " << step << ", delay = " << delayMs << endl;
 	}
 	else if (action.compare(arrCommands[eCmdISet]) == 0)
 	{

@@ -29,7 +29,11 @@ enum eStepTableIndex {
 	kStep2,
 	kStep3,
 	kStep4,
-	kStepMax
+	kStep5,
+	kStep6,
+	kStep7,
+	kStep8,
+	kStepMax,
 };
 
 enum eCheckImageCode {
@@ -37,8 +41,12 @@ enum eCheckImageCode {
 	kChecked
 };
 
-const int kSerialGppCount = 12;
-const int kSerialLoadcellCount = 2;
+const int kSerialGppCount = 18;
+const int kSerialLoadcellCount = 3;
+
+const int kPortPerChamber = 11;
+const int kChamberCount = 3;
+const int kTotalPort = kPortPerChamber * kChamberCount;
 
 const string kJsonfile = ".\\gppc.json";
 
@@ -77,27 +85,42 @@ protected:
 	afx_msg void OnBnClickedButtonS2DelGroup();
 	afx_msg void OnBnClickedButtonS3DelGroup();
 	afx_msg void OnBnClickedButtonS4DelGroup();
+	afx_msg void OnBnClickedButtonS5AddGroup();
+	afx_msg void OnBnClickedButtonS5DelGroup();
+	afx_msg void OnBnClickedButtonS6AddGroup();
+	afx_msg void OnBnClickedButtonS6DelGroup();
+	afx_msg void OnBnClickedButtonS7AddGroup();
+	afx_msg void OnBnClickedButtonS7DelGroup();
+	afx_msg void OnBnClickedButtonS8AddGroup();
+	afx_msg void OnBnClickedButtonS8DelGroup();
 	afx_msg void OnBnClickedButtonSerialAllConnect();
 	afx_msg void OnBnClickedButtonSerialAllDisconnect();
 	afx_msg void OnBnClickedButtonTest();
 	afx_msg void OnBnClickedButtonDelayCalc();
 	afx_msg void OnBnClickedButtonLoad();
 	afx_msg void OnBnClickedButtonSave();
-	afx_msg void OnCbnSelchangeComboSerial1();
-	afx_msg void OnCbnSelchangeComboSerial2();
-	afx_msg void OnCbnSelchangeComboSerial3();
-	afx_msg void OnCbnSelchangeComboSerial4();
-	afx_msg void OnCbnSelchangeComboSerial5();
-	afx_msg void OnCbnSelchangeComboSerial6();
-	afx_msg void OnCbnSelchangeComboSerial7();
-	afx_msg void OnCbnSelchangeComboSerial8();
-	afx_msg void OnCbnSelchangeComboSerial9();
-	afx_msg void OnCbnSelchangeComboSerial10();
-	afx_msg void OnCbnSelchangeComboSerial11();
-	afx_msg void OnCbnSelchangeComboSerial12();
-	afx_msg void OnCbnSelchangeComboSerial13();
-	afx_msg void OnCbnSelchangeComboSerial14();
-	afx_msg void OnCbnSelchangeComboSerial15();
+	afx_msg void OnCbnSelchangeComboSerialGpp01();
+	afx_msg void OnCbnSelchangeComboSerialGpp02();
+	afx_msg void OnCbnSelchangeComboSerialGpp03();
+	afx_msg void OnCbnSelchangeComboSerialGpp04();
+	afx_msg void OnCbnSelchangeComboSerialGpp05();
+	afx_msg void OnCbnSelchangeComboSerialGpp06();
+	afx_msg void OnCbnSelchangeComboSerialGpp07();
+	afx_msg void OnCbnSelchangeComboSerialGpp08();
+	afx_msg void OnCbnSelchangeComboSerialGpp09();
+	afx_msg void OnCbnSelchangeComboSerialGpp10();
+	afx_msg void OnCbnSelchangeComboSerialGpp11();
+	afx_msg void OnCbnSelchangeComboSerialGpp12();
+	afx_msg void OnCbnSelchangeComboSerialGpp13();
+	afx_msg void OnCbnSelchangeComboSerialGpp14();
+	afx_msg void OnCbnSelchangeComboSerialGpp15();
+	afx_msg void OnCbnSelchangeComboSerialGpp16();
+	afx_msg void OnCbnSelchangeComboSerialGpp17();
+	afx_msg void OnCbnSelchangeComboSerialGpp18();
+	afx_msg void OnCbnSelchangeComboSerialLoadcell1();
+	afx_msg void OnCbnSelchangeComboSerialLoadcell2();
+	afx_msg void OnCbnSelchangeComboSerialLoadcell3();
+	afx_msg void OnCbnSelchangeComboSerialDongle();
 	afx_msg LRESULT OnUserEvent(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 	
@@ -144,12 +167,10 @@ protected:
 	// step
 	vector<StepGroup> step_groups[kStepMax];
 	vector<StepGroup*> step_linear;
-	//unsigned int step_delayms[kStepMax];
 
 	int zStatus;
 
 	void TestStart(BOOL start);
-	void TestAddSchedule();
 	void TestAddSchedule(int step);
 	BOOL TestNextGain();
 

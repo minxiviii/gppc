@@ -16,6 +16,9 @@
 #define new DEBUG_NEW
 #endif
 
+static const int kStepfullLength = 10240;
+static string stepfull(kStepfullLength, '\0');
+
 template<typename ... Args>
 std::string string_format(const std::string& format, Args ... args)
 {
@@ -26,12 +29,7 @@ std::string string_format(const std::string& format, Args ... args)
 	return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside 
 }
 
-
-
 // CgppcDlg 대화 상자
-
-
-
 CgppcDlg::CgppcDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_GPPC_DIALOG, pParent)
 	, test_running(false)
@@ -48,31 +46,49 @@ void CgppcDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_LIST_2, listctrl_of_steptable[kStep2]);
 	DDX_Control(pDX, IDC_LIST_3, listctrl_of_steptable[kStep3]);
 	DDX_Control(pDX, IDC_LIST_4, listctrl_of_steptable[kStep4]);
-
-	DDX_Control(pDX, IDC_COMBO_SERIAL1, combo_gpp[0]);
-	DDX_Control(pDX, IDC_COMBO_SERIAL2, combo_gpp[1]);
-	DDX_Control(pDX, IDC_COMBO_SERIAL3, combo_gpp[2]);
-	DDX_Control(pDX, IDC_COMBO_SERIAL4, combo_gpp[3]);
-	DDX_Control(pDX, IDC_COMBO_SERIAL5, combo_gpp[4]);
-	DDX_Control(pDX, IDC_COMBO_SERIAL6, combo_gpp[5]);
-	DDX_Control(pDX, IDC_COMBO_SERIAL7, combo_gpp[6]);
-	DDX_Control(pDX, IDC_COMBO_SERIAL8, combo_gpp[7]);
-	DDX_Control(pDX, IDC_COMBO_SERIAL9, combo_gpp[8]);
-	DDX_Control(pDX, IDC_COMBO_SERIAL10, combo_gpp[9]);
-	DDX_Control(pDX, IDC_COMBO_SERIAL11, combo_gpp[10]);
-	DDX_Control(pDX, IDC_COMBO_SERIAL12, combo_gpp[11]);
-	DDX_Control(pDX, IDC_COMBO_SERIAL13, combo_loadcell[0]);
-	DDX_Control(pDX, IDC_COMBO_SERIAL14, combo_loadcell[1]);
-	DDX_Control(pDX, IDC_COMBO_SERIAL15, combo_dongle);
+	DDX_Control(pDX, IDC_LIST_5, listctrl_of_steptable[kStep5]);
+	DDX_Control(pDX, IDC_LIST_6, listctrl_of_steptable[kStep6]);
+	DDX_Control(pDX, IDC_LIST_7, listctrl_of_steptable[kStep7]);
+	DDX_Control(pDX, IDC_LIST_8, listctrl_of_steptable[kStep8]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_01, combo_gpp[0]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_02, combo_gpp[1]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_03, combo_gpp[2]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_04, combo_gpp[3]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_05, combo_gpp[4]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_06, combo_gpp[5]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_07, combo_gpp[6]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_08, combo_gpp[7]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_09, combo_gpp[8]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_10, combo_gpp[9]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_11, combo_gpp[10]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_12, combo_gpp[11]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_13, combo_gpp[12]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_14, combo_gpp[13]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_15, combo_gpp[14]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_16, combo_gpp[15]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_17, combo_gpp[16]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_GPP_18, combo_gpp[17]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_LOADCELL_1, combo_loadcell[0]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_LOADCELL_2, combo_loadcell[1]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_LOADCELL_3, combo_loadcell[2]);
+	DDX_Control(pDX, IDC_COMBO_SERIAL_DONGLE, combo_dongle);
 	DDX_Text(pDX, IDC_EDIT_SPEED, carrier_speed);
 	DDX_Text(pDX, IDC_EDIT_DISTANCE1, distance[kStep1]);
 	DDX_Text(pDX, IDC_EDIT_DISTANCE2, distance[kStep2]);
 	DDX_Text(pDX, IDC_EDIT_DISTANCE3, distance[kStep3]);
 	DDX_Text(pDX, IDC_EDIT_DISTANCE4, distance[kStep4]);
+	DDX_Text(pDX, IDC_EDIT_DISTANCE5, distance[kStep5]);
+	DDX_Text(pDX, IDC_EDIT_DISTANCE6, distance[kStep6]);
+	DDX_Text(pDX, IDC_EDIT_DISTANCE7, distance[kStep7]);
+	DDX_Text(pDX, IDC_EDIT_DISTANCE8, distance[kStep8]);
 	DDX_Text(pDX, IDC_EDIT_DELAY1, delay[kStep1]);
 	DDX_Text(pDX, IDC_EDIT_DELAY2, delay[kStep2]);
 	DDX_Text(pDX, IDC_EDIT_DELAY3, delay[kStep3]);
 	DDX_Text(pDX, IDC_EDIT_DELAY4, delay[kStep4]);
+	DDX_Text(pDX, IDC_EDIT_DELAY5, delay[kStep5]);
+	DDX_Text(pDX, IDC_EDIT_DELAY6, delay[kStep6]);
+	DDX_Text(pDX, IDC_EDIT_DELAY7, delay[kStep7]);
+	DDX_Text(pDX, IDC_EDIT_DELAY8, delay[kStep8]);
 }
 
 BEGIN_MESSAGE_MAP(CgppcDlg, CDialogEx)
@@ -88,28 +104,42 @@ BEGIN_MESSAGE_MAP(CgppcDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_S3_DEL_GROUP, &CgppcDlg::OnBnClickedButtonS3DelGroup)
 	ON_BN_CLICKED(IDC_BUTTON_S4_ADD_GROUP, &CgppcDlg::OnBnClickedButtonS4AddGroup)
 	ON_BN_CLICKED(IDC_BUTTON_S4_DEL_GROUP, &CgppcDlg::OnBnClickedButtonS4DelGroup)
-	
+	ON_BN_CLICKED(IDC_BUTTON_S5_ADD_GROUP, &CgppcDlg::OnBnClickedButtonS5AddGroup)
+	ON_BN_CLICKED(IDC_BUTTON_S5_DEL_GROUP, &CgppcDlg::OnBnClickedButtonS5DelGroup)
+	ON_BN_CLICKED(IDC_BUTTON_S6_ADD_GROUP, &CgppcDlg::OnBnClickedButtonS6AddGroup)
+	ON_BN_CLICKED(IDC_BUTTON_S6_DEL_GROUP, &CgppcDlg::OnBnClickedButtonS6DelGroup)
+	ON_BN_CLICKED(IDC_BUTTON_S7_ADD_GROUP, &CgppcDlg::OnBnClickedButtonS7AddGroup)
+	ON_BN_CLICKED(IDC_BUTTON_S7_DEL_GROUP, &CgppcDlg::OnBnClickedButtonS7DelGroup)
+	ON_BN_CLICKED(IDC_BUTTON_S8_ADD_GROUP, &CgppcDlg::OnBnClickedButtonS8AddGroup)
+	ON_BN_CLICKED(IDC_BUTTON_S8_DEL_GROUP, &CgppcDlg::OnBnClickedButtonS8DelGroup)
 	ON_BN_CLICKED(IDC_BUTTON_TEST, &CgppcDlg::OnBnClickedButtonTest)
 	ON_BN_CLICKED(IDC_BUTTON_SERIAL_ALL_CONNECT, &CgppcDlg::OnBnClickedButtonSerialAllConnect)
 	ON_BN_CLICKED(IDC_BUTTON_SERIAL_ALL_DISCONNECT, &CgppcDlg::OnBnClickedButtonSerialAllDisconnect)
 	ON_BN_CLICKED(IDC_BUTTON_DELAY_CALC, &CgppcDlg::OnBnClickedButtonDelayCalc)
 	ON_BN_CLICKED(IDC_BUTTON_LOAD, &CgppcDlg::OnBnClickedButtonLoad)
 	ON_BN_CLICKED(IDC_BUTTON_SAVE, &CgppcDlg::OnBnClickedButtonSave)
-	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL1, &CgppcDlg::OnCbnSelchangeComboSerial1)
-	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL2, &CgppcDlg::OnCbnSelchangeComboSerial2)
-	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL3, &CgppcDlg::OnCbnSelchangeComboSerial3)
-	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL4, &CgppcDlg::OnCbnSelchangeComboSerial4)
-	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL5, &CgppcDlg::OnCbnSelchangeComboSerial5)
-	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL6, &CgppcDlg::OnCbnSelchangeComboSerial6)
-	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL7, &CgppcDlg::OnCbnSelchangeComboSerial7)
-	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL8, &CgppcDlg::OnCbnSelchangeComboSerial8)
-	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL9, &CgppcDlg::OnCbnSelchangeComboSerial9)
-	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL10, &CgppcDlg::OnCbnSelchangeComboSerial10)
-	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL11, &CgppcDlg::OnCbnSelchangeComboSerial11)
-	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL12, &CgppcDlg::OnCbnSelchangeComboSerial12)
-	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL13, &CgppcDlg::OnCbnSelchangeComboSerial13)
-	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL14, &CgppcDlg::OnCbnSelchangeComboSerial14)
-	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL15, &CgppcDlg::OnCbnSelchangeComboSerial15)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_01, &CgppcDlg::OnCbnSelchangeComboSerialGpp01)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_02, &CgppcDlg::OnCbnSelchangeComboSerialGpp02)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_03, &CgppcDlg::OnCbnSelchangeComboSerialGpp03)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_04, &CgppcDlg::OnCbnSelchangeComboSerialGpp04)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_05, &CgppcDlg::OnCbnSelchangeComboSerialGpp05)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_06, &CgppcDlg::OnCbnSelchangeComboSerialGpp06)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_07, &CgppcDlg::OnCbnSelchangeComboSerialGpp07)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_08, &CgppcDlg::OnCbnSelchangeComboSerialGpp08)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_09, &CgppcDlg::OnCbnSelchangeComboSerialGpp09)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_10, &CgppcDlg::OnCbnSelchangeComboSerialGpp10)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_11, &CgppcDlg::OnCbnSelchangeComboSerialGpp11)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_12, &CgppcDlg::OnCbnSelchangeComboSerialGpp12)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_13, &CgppcDlg::OnCbnSelchangeComboSerialGpp13)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_14, &CgppcDlg::OnCbnSelchangeComboSerialGpp14)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_15, &CgppcDlg::OnCbnSelchangeComboSerialGpp15)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_16, &CgppcDlg::OnCbnSelchangeComboSerialGpp16)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_17, &CgppcDlg::OnCbnSelchangeComboSerialGpp17)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_GPP_18, &CgppcDlg::OnCbnSelchangeComboSerialGpp18)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_LOADCELL_1, &CgppcDlg::OnCbnSelchangeComboSerialLoadcell1)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_LOADCELL_2, &CgppcDlg::OnCbnSelchangeComboSerialLoadcell2)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_LOADCELL_3, &CgppcDlg::OnCbnSelchangeComboSerialLoadcell3)
+	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_DONGLE, &CgppcDlg::OnCbnSelchangeComboSerialDongle)
 END_MESSAGE_MAP()
 
 
@@ -308,24 +338,24 @@ void CgppcDlg::InitListCtrls()
 		listctrl_of_steptable[i].InsertHiddenLabelColumn();	// Requires one never uses column 0
 
 		// GROUP
-		listctrl_of_steptable[i].InsertColumnTrait(++col, _T("GROUP"), LVCFMT_CENTER, 52, -1, new CGridColumnTraitText);
+		listctrl_of_steptable[i].InsertColumnTrait(++col, _T("GRP"), LVCFMT_CENTER, 34, -1, new CGridColumnTraitText);
 
 		// M1 ~ M22
-		for (int j = 1; j <= 22; j++)
+		for (int j = 0; j < kTotalPort; j++)
 		{
 			CGridColumnTraitImage* trait = new CGridColumnTraitImage();
 			trait->AddImageIndex(imageindex, _T(""), FALSE);		// Unchecked (and not editable)
 			trait->AddImageIndex(imageindex + 1, _T(""), TRUE);	// Checked (and editable)
 			trait->SetToggleSelection(true);
 			CString numbering;
-			numbering.Format(_T("M%d"), j);
+			numbering.Format(_T("M%d"), j+1);
 			listctrl_of_steptable[i].InsertColumnTrait(++col, numbering, LVCFMT_CENTER, 36, -1, trait);
 			
 		}
 
 		// START - END - INTERVAL
-		listctrl_of_steptable[i].InsertColumnTrait(++col, _T("Start"), LVCFMT_RIGHT, 48, -1, new CGridColumnTraitEdit);
-		listctrl_of_steptable[i].InsertColumnTrait(++col, _T("End"), LVCFMT_RIGHT, 48, -1, new CGridColumnTraitEdit);
+		listctrl_of_steptable[i].InsertColumnTrait(++col, _T("Start"), LVCFMT_RIGHT, 46, -1, new CGridColumnTraitEdit);
+		listctrl_of_steptable[i].InsertColumnTrait(++col, _T("End"), LVCFMT_RIGHT, 46, -1, new CGridColumnTraitEdit);
 		listctrl_of_steptable[i].InsertColumnTrait(++col, _T("Interval"), LVCFMT_RIGHT, 54, -1, new CGridColumnTraitEdit);
 	}
 }
@@ -341,7 +371,7 @@ void CgppcDlg::AddStepTableRow(const int step_number, const CString start_value,
 	group_number.Format(_T("%d"), row + 1);
 	listctrl_of_steptable[step_number].SetItemText(row, col++, group_number);
 
-	for (int j = 0; j < 22; j++)
+	for (int j = 0; j < kTotalPort; j++)
 	{
 		listctrl_of_steptable[step_number].SetCellImage(row, col++, FALSE);
 	}
@@ -366,7 +396,7 @@ void CgppcDlg::AddStepTableRow(const int step_number, StepGroup* step_group)
 	sort(port.begin(), port.end());
 	
 	int pos = 0;
-	for (int j = 0; j < 22; j++)
+	for (int j = 0; j < kTotalPort; j++)
 	{
 		BOOL check(FALSE);
 		if (pos < port.size() && (j+1) == port[pos])
@@ -462,29 +492,36 @@ afx_msg void CgppcDlg::LoadJSonOfSteps()
 	OnBnClickedButtonDelayCalc();
 }
 
-void CgppcDlg::OnCbnSelchangeComboSerial1() { SelchangeComboSerial(1); }
-void CgppcDlg::OnCbnSelchangeComboSerial2() { SelchangeComboSerial(2); }
-void CgppcDlg::OnCbnSelchangeComboSerial3() { SelchangeComboSerial(3); }
-void CgppcDlg::OnCbnSelchangeComboSerial4() { SelchangeComboSerial(4); }
-void CgppcDlg::OnCbnSelchangeComboSerial5() { SelchangeComboSerial(5); }
-void CgppcDlg::OnCbnSelchangeComboSerial6() { SelchangeComboSerial(6); }
-void CgppcDlg::OnCbnSelchangeComboSerial7() { SelchangeComboSerial(7); }
-void CgppcDlg::OnCbnSelchangeComboSerial8() { SelchangeComboSerial(8); }
-void CgppcDlg::OnCbnSelchangeComboSerial9() { SelchangeComboSerial(9); }
-void CgppcDlg::OnCbnSelchangeComboSerial10() { SelchangeComboSerial(10); }
-void CgppcDlg::OnCbnSelchangeComboSerial11() { SelchangeComboSerial(11); }
-void CgppcDlg::OnCbnSelchangeComboSerial12() { SelchangeComboSerial(12); }
-void CgppcDlg::OnCbnSelchangeComboSerial13() { SelchangeComboSerial(13); }
-void CgppcDlg::OnCbnSelchangeComboSerial14() { SelchangeComboSerial(14); }
-void CgppcDlg::OnCbnSelchangeComboSerial15() { SelchangeComboSerial(15); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp01() { SelchangeComboSerial(1); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp02() { SelchangeComboSerial(2); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp03() { SelchangeComboSerial(3); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp04() { SelchangeComboSerial(4); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp05() { SelchangeComboSerial(5); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp06() { SelchangeComboSerial(6); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp07() { SelchangeComboSerial(7); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp08() { SelchangeComboSerial(8); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp09() { SelchangeComboSerial(9); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp10() { SelchangeComboSerial(10); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp11() { SelchangeComboSerial(11); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp12() { SelchangeComboSerial(12); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp13() { SelchangeComboSerial(13); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp14() { SelchangeComboSerial(14); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp15() { SelchangeComboSerial(15); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp16() { SelchangeComboSerial(16); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp17() { SelchangeComboSerial(17); }
+void CgppcDlg::OnCbnSelchangeComboSerialGpp18()		{ SelchangeComboSerial(18); }
+void CgppcDlg::OnCbnSelchangeComboSerialLoadcell1() { SelchangeComboSerial(19); }
+void CgppcDlg::OnCbnSelchangeComboSerialLoadcell2() { SelchangeComboSerial(20); }
+void CgppcDlg::OnCbnSelchangeComboSerialLoadcell3() { SelchangeComboSerial(21); }
+void CgppcDlg::OnCbnSelchangeComboSerialDongle() { SelchangeComboSerial(22); }
 
 void CgppcDlg::SelchangeComboSerial(const int combobox_number)
 {
-	const int count = kSerialGppCount + kSerialLoadcellCount + 1;
-	CComboBox* combobox[count] = {
+	CComboBox* combobox[] = {
 		&combo_gpp[0],&combo_gpp[1],&combo_gpp[2],&combo_gpp[3],&combo_gpp[4],&combo_gpp[5],
 		&combo_gpp[6],&combo_gpp[7],&combo_gpp[8],&combo_gpp[9],&combo_gpp[10],&combo_gpp[11],
-		&combo_loadcell[0], &combo_loadcell[1], &combo_dongle };
+		&combo_gpp[12], &combo_gpp[13], &combo_gpp[14], &combo_gpp[15], &combo_gpp[16], &combo_gpp[17],
+		&combo_loadcell[0], &combo_loadcell[1], &combo_loadcell[2], &combo_dongle };
 
 	int i = combobox_number - 1;
 
@@ -531,7 +568,7 @@ void CgppcDlg::SaveJSonOfSteps()
 			CString group_number = listctrl_of_steptable[step].GetItemText(row, col++);
 
 			int mem_count(0);
-			for (int j = 0; j < 22; j++)
+			for (int j = 0; j < kTotalPort; j++)
 			{
 				BOOL m = listctrl_of_steptable[step].GetCellImage(row, col++);
 				if (m) { group_json["member"][mem_count++] = j + 1; }
@@ -583,7 +620,7 @@ void CgppcDlg::UpdateStepGroups()
 			CString group_number = listctrl_of_steptable[step].GetItemText(row, col++);
 
 			vector<int> member;
-			for (int j = 0; j < 22; j++)
+			for (int j = 0; j < kTotalPort; j++)
 			{
 				BOOL m = listctrl_of_steptable[step].GetCellImage(row, col++);
 				if (m) { member.push_back(j + 1); }
@@ -610,11 +647,19 @@ void CgppcDlg::OnBnClickedButtonS1AddGroup() { AddStepTableRow(kStep1); }
 void CgppcDlg::OnBnClickedButtonS2AddGroup() { AddStepTableRow(kStep2); }
 void CgppcDlg::OnBnClickedButtonS3AddGroup() { AddStepTableRow(kStep3); }
 void CgppcDlg::OnBnClickedButtonS4AddGroup() { AddStepTableRow(kStep4); }
+void CgppcDlg::OnBnClickedButtonS5AddGroup() { AddStepTableRow(kStep5); }
+void CgppcDlg::OnBnClickedButtonS6AddGroup() { AddStepTableRow(kStep6); }
+void CgppcDlg::OnBnClickedButtonS7AddGroup() { AddStepTableRow(kStep7); }
+void CgppcDlg::OnBnClickedButtonS8AddGroup() { AddStepTableRow(kStep8); }
 
 void CgppcDlg::OnBnClickedButtonS1DelGroup() { RemoveStepTableRow(kStep1); }
 void CgppcDlg::OnBnClickedButtonS2DelGroup() { RemoveStepTableRow(kStep2); }
 void CgppcDlg::OnBnClickedButtonS3DelGroup() { RemoveStepTableRow(kStep3); }
 void CgppcDlg::OnBnClickedButtonS4DelGroup() { RemoveStepTableRow(kStep4); }
+void CgppcDlg::OnBnClickedButtonS5DelGroup() { RemoveStepTableRow(kStep5); }
+void CgppcDlg::OnBnClickedButtonS6DelGroup() { RemoveStepTableRow(kStep6); }
+void CgppcDlg::OnBnClickedButtonS7DelGroup() { RemoveStepTableRow(kStep7); }
+void CgppcDlg::OnBnClickedButtonS8DelGroup() { RemoveStepTableRow(kStep8); }
 
 /****** End UI - Step ******/
 
@@ -632,7 +677,7 @@ void CgppcDlg::OnBnClickedButtonDelayCalc()
 		int distance = _ttoi(this->distance[i]);
 		
 
-		unsigned int delay = (speed > 0) ? ((double)distance / (double)speed * 1000) : 0;
+		unsigned int delay = (speed > 0) ? (unsigned int)((double)distance / (double)speed * 1000) : 0;
 		this->delay[i].Format(_T("%d"), delay);
 	}
 	
@@ -642,15 +687,17 @@ void CgppcDlg::OnBnClickedButtonDelayCalc()
 void CgppcDlg::OnBnClickedButtonSerialAllConnect()
 {
 	const int ids[] = {
-		IDC_BUTTON_SERIAL1, IDC_BUTTON_SERIAL2, IDC_BUTTON_SERIAL3, IDC_BUTTON_SERIAL4, IDC_BUTTON_SERIAL5, IDC_BUTTON_SERIAL6,
-		IDC_BUTTON_SERIAL7, IDC_BUTTON_SERIAL8, IDC_BUTTON_SERIAL9, IDC_BUTTON_SERIAL10, IDC_BUTTON_SERIAL11, IDC_BUTTON_SERIAL12,
-		IDC_BUTTON_SERIAL13, IDC_BUTTON_SERIAL14, IDC_BUTTON_SERIAL15,
+		IDC_BUTTON_SERIAL_GPP_01, IDC_BUTTON_SERIAL_GPP_02, IDC_BUTTON_SERIAL_GPP_03, IDC_BUTTON_SERIAL_GPP_04, IDC_BUTTON_SERIAL_GPP_05, IDC_BUTTON_SERIAL_GPP_06,
+		IDC_BUTTON_SERIAL_GPP_07, IDC_BUTTON_SERIAL_GPP_08, IDC_BUTTON_SERIAL_GPP_09, IDC_BUTTON_SERIAL_GPP_10, IDC_BUTTON_SERIAL_GPP_11, IDC_BUTTON_SERIAL_GPP_12,
+		IDC_BUTTON_SERIAL_GPP_13, IDC_BUTTON_SERIAL_GPP_14, IDC_BUTTON_SERIAL_GPP_15, IDC_BUTTON_SERIAL_GPP_16, IDC_BUTTON_SERIAL_GPP_17, IDC_BUTTON_SERIAL_GPP_18,
+		IDC_BUTTON_SERIAL_LOADCELL_1, IDC_BUTTON_SERIAL_LOADCELL_2, IDC_BUTTON_SERIAL_LOADCELL_3, IDC_BUTTON_SERIAL_DONGLE
 	};
 
 	const int port[] = {
-		IDC_COMBO_SERIAL1, IDC_COMBO_SERIAL2, IDC_COMBO_SERIAL3, IDC_COMBO_SERIAL4, IDC_COMBO_SERIAL5, IDC_COMBO_SERIAL6,
-		IDC_COMBO_SERIAL7, IDC_COMBO_SERIAL8, IDC_COMBO_SERIAL9, IDC_COMBO_SERIAL10, IDC_COMBO_SERIAL11, IDC_COMBO_SERIAL12,
-		IDC_COMBO_SERIAL13, IDC_COMBO_SERIAL14, IDC_COMBO_SERIAL15,
+		IDC_COMBO_SERIAL_GPP_01, IDC_COMBO_SERIAL_GPP_02, IDC_COMBO_SERIAL_GPP_03, IDC_COMBO_SERIAL_GPP_04, IDC_COMBO_SERIAL_GPP_05, IDC_COMBO_SERIAL_GPP_06,
+		IDC_COMBO_SERIAL_GPP_07, IDC_COMBO_SERIAL_GPP_08, IDC_COMBO_SERIAL_GPP_09, IDC_COMBO_SERIAL_GPP_10, IDC_COMBO_SERIAL_GPP_11, IDC_COMBO_SERIAL_GPP_12,
+		IDC_COMBO_SERIAL_GPP_13, IDC_COMBO_SERIAL_GPP_14, IDC_COMBO_SERIAL_GPP_15, IDC_COMBO_SERIAL_GPP_16, IDC_COMBO_SERIAL_GPP_17, IDC_COMBO_SERIAL_GPP_18,
+		IDC_COMBO_SERIAL_LOADCELL_1, IDC_COMBO_SERIAL_LOADCELL_2, IDC_COMBO_SERIAL_LOADCELL_3, IDC_COMBO_SERIAL_DONGLE
 	};
 
 	const int count = sizeof(ids) / sizeof(*ids);
@@ -706,15 +753,17 @@ void CgppcDlg::OnBnClickedButtonSerialAllConnect()
 void CgppcDlg::OnBnClickedButtonSerialAllDisconnect()
 {
 	const int ids[] = {
-		IDC_BUTTON_SERIAL1, IDC_BUTTON_SERIAL2, IDC_BUTTON_SERIAL3, IDC_BUTTON_SERIAL4, IDC_BUTTON_SERIAL5, IDC_BUTTON_SERIAL6,
-		IDC_BUTTON_SERIAL7, IDC_BUTTON_SERIAL8, IDC_BUTTON_SERIAL9, IDC_BUTTON_SERIAL10, IDC_BUTTON_SERIAL11, IDC_BUTTON_SERIAL12,
-		IDC_BUTTON_SERIAL13, IDC_BUTTON_SERIAL14, IDC_BUTTON_SERIAL15,
+		IDC_BUTTON_SERIAL_GPP_01, IDC_BUTTON_SERIAL_GPP_02, IDC_BUTTON_SERIAL_GPP_03, IDC_BUTTON_SERIAL_GPP_04, IDC_BUTTON_SERIAL_GPP_05, IDC_BUTTON_SERIAL_GPP_06,
+		IDC_BUTTON_SERIAL_GPP_07, IDC_BUTTON_SERIAL_GPP_08, IDC_BUTTON_SERIAL_GPP_09, IDC_BUTTON_SERIAL_GPP_10, IDC_BUTTON_SERIAL_GPP_11, IDC_BUTTON_SERIAL_GPP_12,
+		IDC_BUTTON_SERIAL_GPP_13, IDC_BUTTON_SERIAL_GPP_14, IDC_BUTTON_SERIAL_GPP_15, IDC_BUTTON_SERIAL_GPP_16, IDC_BUTTON_SERIAL_GPP_17, IDC_BUTTON_SERIAL_GPP_18,
+		IDC_BUTTON_SERIAL_LOADCELL_1, IDC_BUTTON_SERIAL_LOADCELL_2, IDC_BUTTON_SERIAL_LOADCELL_3, IDC_BUTTON_SERIAL_DONGLE
 	};
 
 	const int port[] = {
-	IDC_COMBO_SERIAL1, IDC_COMBO_SERIAL2, IDC_COMBO_SERIAL3, IDC_COMBO_SERIAL4, IDC_COMBO_SERIAL5, IDC_COMBO_SERIAL6,
-	IDC_COMBO_SERIAL7, IDC_COMBO_SERIAL8, IDC_COMBO_SERIAL9, IDC_COMBO_SERIAL10, IDC_COMBO_SERIAL11, IDC_COMBO_SERIAL12,
-	IDC_COMBO_SERIAL13, IDC_COMBO_SERIAL14, IDC_COMBO_SERIAL15,
+		IDC_COMBO_SERIAL_GPP_01, IDC_COMBO_SERIAL_GPP_02, IDC_COMBO_SERIAL_GPP_03, IDC_COMBO_SERIAL_GPP_04, IDC_COMBO_SERIAL_GPP_05, IDC_COMBO_SERIAL_GPP_06,
+		IDC_COMBO_SERIAL_GPP_07, IDC_COMBO_SERIAL_GPP_08, IDC_COMBO_SERIAL_GPP_09, IDC_COMBO_SERIAL_GPP_10, IDC_COMBO_SERIAL_GPP_11, IDC_COMBO_SERIAL_GPP_12,
+		IDC_COMBO_SERIAL_GPP_13, IDC_COMBO_SERIAL_GPP_14, IDC_COMBO_SERIAL_GPP_15, IDC_COMBO_SERIAL_GPP_16, IDC_COMBO_SERIAL_GPP_17, IDC_COMBO_SERIAL_GPP_18,
+		IDC_COMBO_SERIAL_LOADCELL_1, IDC_COMBO_SERIAL_LOADCELL_2, IDC_COMBO_SERIAL_LOADCELL_3, IDC_COMBO_SERIAL_DONGLE
 	};
 
 	const int count = sizeof(ids) / sizeof(*ids);
@@ -745,29 +794,36 @@ void CgppcDlg::OnBnClickedButtonSerialAllDisconnect()
 
 void CgppcDlg::OnBnClickedButtonTest()
 {
+	stepfull.clear();
 	test_running = !test_running;
 	TestStart(test_running);
 }
 
-
 void CgppcDlg::TestStart(BOOL start)
 {
 	const int ids[] = {
-		IDC_LIST_1, IDC_LIST_2, IDC_LIST_3, IDC_LIST_4,
+		IDC_LIST_1, IDC_LIST_2, IDC_LIST_3, IDC_LIST_4, IDC_LIST_5, IDC_LIST_6, IDC_LIST_7, IDC_LIST_8,
 		IDC_BUTTON_S1_ADD_GROUP, IDC_BUTTON_S2_ADD_GROUP, IDC_BUTTON_S3_ADD_GROUP, IDC_BUTTON_S4_ADD_GROUP,
+		IDC_BUTTON_S5_ADD_GROUP, IDC_BUTTON_S6_ADD_GROUP, IDC_BUTTON_S7_ADD_GROUP, IDC_BUTTON_S8_ADD_GROUP,
 		IDC_BUTTON_S1_DEL_GROUP, IDC_BUTTON_S2_DEL_GROUP, IDC_BUTTON_S3_DEL_GROUP, IDC_BUTTON_S4_DEL_GROUP,
+		IDC_BUTTON_S5_DEL_GROUP, IDC_BUTTON_S6_DEL_GROUP, IDC_BUTTON_S7_DEL_GROUP, IDC_BUTTON_S8_DEL_GROUP,
 
 		IDC_EDIT_SPEED, IDC_BUTTON_DELAY_CALC,
 		IDC_EDIT_DISTANCE1, IDC_EDIT_DISTANCE2, IDC_EDIT_DISTANCE3, IDC_EDIT_DISTANCE4,
+		IDC_EDIT_DISTANCE5, IDC_EDIT_DISTANCE6, IDC_EDIT_DISTANCE7, IDC_EDIT_DISTANCE8,
 		IDC_EDIT_DELAY1, IDC_EDIT_DELAY2, IDC_EDIT_DELAY3, IDC_EDIT_DELAY4,
+		IDC_EDIT_DELAY5, IDC_EDIT_DELAY6, IDC_EDIT_DELAY7, IDC_EDIT_DELAY8,
 /*
-		IDC_COMBO_SERIAL1, IDC_COMBO_SERIAL2, IDC_COMBO_SERIAL3, IDC_COMBO_SERIAL4, IDC_COMBO_SERIAL5, IDC_COMBO_SERIAL6,
-		IDC_COMBO_SERIAL7, IDC_COMBO_SERIAL8, IDC_COMBO_SERIAL9, IDC_COMBO_SERIAL10, IDC_COMBO_SERIAL11, IDC_COMBO_SERIAL12,
-		IDC_COMBO_SERIAL13, IDC_COMBO_SERIAL14, IDC_COMBO_SERIAL15,
-
-		IDC_BUTTON_SERIAL1, IDC_BUTTON_SERIAL2, IDC_BUTTON_SERIAL3, IDC_BUTTON_SERIAL4, IDC_BUTTON_SERIAL5, IDC_BUTTON_SERIAL6,
-		IDC_BUTTON_SERIAL7, IDC_BUTTON_SERIAL8, IDC_BUTTON_SERIAL9, IDC_BUTTON_SERIAL10, IDC_BUTTON_SERIAL11, IDC_BUTTON_SERIAL12,
-		IDC_BUTTON_SERIAL13, IDC_BUTTON_SERIAL14, IDC_BUTTON_SERIAL15,
+		IDC_BUTTON_SERIAL_GPP_01, IDC_BUTTON_SERIAL_GPP_02, IDC_BUTTON_SERIAL_GPP_03, IDC_BUTTON_SERIAL_GPP_04, IDC_BUTTON_SERIAL_GPP_05, IDC_BUTTON_SERIAL_GPP_06,
+		IDC_BUTTON_SERIAL_GPP_07, IDC_BUTTON_SERIAL_GPP_08, IDC_BUTTON_SERIAL_GPP_09, IDC_BUTTON_SERIAL_GPP_10, IDC_BUTTON_SERIAL_GPP_11, IDC_BUTTON_SERIAL_GPP_12,
+		IDC_BUTTON_SERIAL_GPP_13, IDC_BUTTON_SERIAL_GPP_14, IDC_BUTTON_SERIAL_GPP_15, IDC_BUTTON_SERIAL_GPP_16, IDC_BUTTON_SERIAL_GPP_17, IDC_BUTTON_SERIAL_GPP_18,
+		IDC_BUTTON_SERIAL_LOADCELL_1, IDC_BUTTON_SERIAL_LOADCELL_2, IDC_BUTTON_SERIAL_LOADCELL_3, IDC_BUTTON_SERIAL_DONGLE,
+	
+		IDC_COMBO_SERIAL_GPP_01, IDC_COMBO_SERIAL_GPP_02, IDC_COMBO_SERIAL_GPP_03, IDC_COMBO_SERIAL_GPP_04, IDC_COMBO_SERIAL_GPP_05, IDC_COMBO_SERIAL_GPP_06,
+		IDC_COMBO_SERIAL_GPP_07, IDC_COMBO_SERIAL_GPP_08, IDC_COMBO_SERIAL_GPP_09, IDC_COMBO_SERIAL_GPP_10, IDC_COMBO_SERIAL_GPP_11, IDC_COMBO_SERIAL_GPP_12,
+		IDC_COMBO_SERIAL_GPP_13, IDC_COMBO_SERIAL_GPP_14, IDC_COMBO_SERIAL_GPP_15, IDC_COMBO_SERIAL_GPP_16, IDC_COMBO_SERIAL_GPP_17, IDC_COMBO_SERIAL_GPP_18,
+		IDC_COMBO_SERIAL_LOADCELL_1, IDC_COMBO_SERIAL_LOADCELL_2, IDC_COMBO_SERIAL_LOADCELL_3, IDC_COMBO_SERIAL_DONGLE,
+	};
 */
 		IDC_BUTTON_SERIAL_ALL_CONNECT, IDC_BUTTON_SERIAL_ALL_DISCONNECT
 	};
@@ -780,7 +836,7 @@ void CgppcDlg::TestStart(BOOL start)
 		step_linear.clear();
 		for (int step = kStep1; step < kStepMax; step++)
 		{
-			int row_count = step_groups[step].size();
+			int row_count = (int)step_groups[step].size();
 			for (int row = 0; row < row_count; row++)
 			{
 				step_linear.push_back(&step_groups[step][row]);
@@ -794,8 +850,10 @@ void CgppcDlg::TestStart(BOOL start)
 		row += ",step";
 		row += ",m1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11";
 		row += ",m12,m13,m14,m15,m16,m17,m18,m19,m20,m21,m22";
+		row += ",m23,m24,m25,m26,m27,m28,m29,m30,m31,m32,m33";
 		row += ",w1,w2,w3,w4,w5,w6";
 		row += ",w7,w8,w9,w10,w11,w12";
+		row += ",w13,w14,w15,w16,w17,w18";
 		row += "\n";
 		csv.Write(row);
 
@@ -839,7 +897,7 @@ void CgppcDlg::TestAddSchedule(int step)
 	delay_value = string_format("%d", delayms);
 	//delay_value.Format(_T("%d"), delayms);
 	
-	int row_count = step_groups[step].size();
+	int row_count = (int)step_groups[step].size();
 
 	for (int row = 0; row < row_count; row++)
 	{
@@ -850,26 +908,15 @@ void CgppcDlg::TestAddSchedule(int step)
 		vector<int> port_number = step_groups[step][row].GetOutputPorts();
 		for (int i = 0; i < port_number.size(); i++)
 		{
-			int ctrl_index(0);
-			int port_index(0);
-			int num = port_number[i];
+			int num = port_number[i] - 1;
+			num += (num / 11);
 
-			if (num < 12)
-			{
-				num--;
-				ctrl_index = num / 2;
-				port_index = num % 2;
-			}
-			else
-			{
-				num -= 12;
-				ctrl_index = num / 2 + 6;
-				port_index = num % 2;
-			}
+			int ctrl_index = num / 2;
+			int port_index = num % 2;
 
 			if (power_controller[ctrl_index].IsOpen())
 			{
-				power_controller[ctrl_index].AddSchedule(port_index, kISET, iset_value, step+1);				
+				power_controller[ctrl_index].AddSchedule(port_index, kISET, iset_value, step+1);
 			}
 		}
 	}
@@ -889,7 +936,7 @@ void CgppcDlg::TestAddSchedule(int step)
 BOOL CgppcDlg::TestNextGain()
 {
 	BOOL gain(FALSE);
-	int length = step_linear.size();
+	int length = (int)step_linear.size();
 	for (int i = 0; i < length && !gain; i++)
 	{
 		if (step_linear[i]->IsOver() == FALSE)
@@ -981,9 +1028,6 @@ void CgppcDlg::PowerContollerCB(void* data, void* context)
 
 afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 {
-	static const int stepfull_length = 10240;
-	static string stepfull(stepfull_length, '\0');
-
 	int event = (int)wParam;
 	if (event == kEventReceiveLoadcell)
 	{
@@ -1043,7 +1087,7 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 #ifdef __DEBUG_CONSOLE__
 		cout << endl << "[ Z-START ] : Try Count " << trycount << endl;
 #endif
-		//TestAddSchedule();
+
 		for (int i = 0; i < kSerialGppCount; i++)
 		{
 			for (int j = 0; j < power_controller[i].GetPortCount(); j++)
@@ -1124,7 +1168,6 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 			csv.Write(stepfull);
 		}
 
-		stepfull.reserve(stepfull_length);
 		stepfull.clear();
 
 		BOOL result = TestNextGain();
