@@ -231,6 +231,8 @@
     <ClInclude Include="IniConfig.h" />
     <ClInclude Include="ZDongle.h" />
     <ClInclude Include="CommandModel.h" />
+    <ClInclude Include="UDP_HallSensor.h" />
+    <ClInclude Include="UDP_Analyzer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CGridListCtrlEx\CGridColumnTraitCombo.cpp" />
@@ -264,6 +266,8 @@
     <ClCompile Include="StepInfo.cpp" />
     <ClCompile Include="ZDongle.cpp" />
     <ClCompile Include="CommandModel.cpp" />
+    <ClCompile Include="UDP_HallSensor.cpp" />
+    <ClCompile Include="UDP_Analyzer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="gppc.rc" />

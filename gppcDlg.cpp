@@ -179,6 +179,14 @@ BOOL CgppcDlg::OnInitDialog()
 	LoadJSonOfSteps();
 	UpdateData(FALSE);
 
+	if (WSAStartup(MAKEWORD(2, 2), &wsa) == 0)
+	{
+		udp_hallsensor.OpenSocket();
+		udp_analyzer.OpenSocket();
+		udp_analyzer.Send("adf");
+	}
+	
+
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
 
@@ -241,6 +249,10 @@ void CgppcDlg::Exit()
 	zdongle.DisconnectSerial();
 	for (int i = 0; i < kSerialLoadcellCount; i++) { loadcell[i].DisconnectSerial(); }
 	for (int i = 0; i < kSerialGppCount; i++) { power_controller[i].Deinit(); }
+
+	udp_hallsensor.CloseSocket();
+	udp_analyzer.CloseSocket();
+	WSACleanup();
 }
 
 BOOL CgppcDlg::PreTranslateMessage(MSG* pMsg)
@@ -793,7 +805,7 @@ void CgppcDlg::OnBnClickedButtonSerialAllDisconnect()
 }
 
 void CgppcDlg::OnBnClickedButtonTest()
-{
+{	
 	stepfull.clear();
 	test_running = !test_running;
 	TestStart(test_running);
@@ -1077,6 +1089,7 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 		stepfull += line;
 
 #ifdef __DEBUG_CONSOLE__
+		udp_analyzer.Send(weight + "\n");
 		cout << "[ STEP - " << step_value << " ] " << line;
 #endif
 	}

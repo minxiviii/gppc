@@ -150,6 +150,12 @@
     <ClInclude Include="CommandModel.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="UDP_HallSensor.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="UDP_Analyzer.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="gppc.cpp">
@@ -228,6 +234,12 @@
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="CommandModel.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="UDP_HallSensor.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="UDP_Analyzer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>

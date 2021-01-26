@@ -12,6 +12,9 @@
 #include "StepInfo.h"
 #include "csv.h"
 #include "IniConfig.h"
+#include "UDP_HallSensor.h"
+#include "UDP_Analyzer.h"
+
 
 const int WM_USEREVENT = (WM_USER + 1);
 const int USER_TIMER = 1000;
@@ -167,6 +170,11 @@ protected:
 	// step
 	vector<StepGroup> step_groups[kStepMax];
 	vector<StepGroup*> step_linear;
+
+	// UDP
+	WSADATA wsa;
+	UDP_HallSensor udp_hallsensor;
+	UDP_Analyzer udp_analyzer;
 
 	int zStatus;
 
