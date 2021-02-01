@@ -36,6 +36,9 @@
 #define IDC_COMBO_SERIAL6               1024
 #define IDC_COMBO_SERIAL_GPP_06         1024
 #define IDC_BUTTON_SAVE                 1025
+#define IDC_RADIO_ZDONGLE               1026
+#define IDC_RADIO_HALLSENSOR            1027
+#define IDC_EDIT_HALLSENSOR_PORT        1028
 #define IDC_EDIT_DISTANCE5              1029
 #define IDC_BUTTON_S5_ADD_GROUP         1030
 #define IDC_COMBO_SERIAL13              1031
@@ -62,6 +65,13 @@
 #define IDC_EDIT_DISTANCE8              1045
 #define IDC_BUTTON_S8_ADD_GROUP         1046
 #define IDC_BUTTON_S8_DEL_GROUP         1047
+#define IDC_EDIT_ANALYZER_IP            1048
+#define IDC_EDIT_ANALYZER_PORT          1049
+#define IDC_CHECK_ANALYZER              1050
+#define IDC_EDIT_START_POS              1051
+#define IDC_EDIT_FINISHI_POS            1052
+#define IDC_COMBO_RUNMODE               1054
+#define IDC_EDIT_FILE                   1055
 #define IDC_LIST_5                      1057
 #define IDC_LIST_6                      1058
 #define IDC_LIST_7                      1059
@@ -132,7 +142,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        130
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1020
+#define _APS_NEXT_CONTROL_VALUE         1056
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

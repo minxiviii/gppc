@@ -19,6 +19,16 @@
 static const int kStepfullLength = 10240;
 static string stepfull(kStepfullLength, '\0');
 
+
+static const int kMovingBacward = 0;
+static const int kMovingForward = 1;
+static const int kCarrierStopped = 0;
+static const int kCarrierMoving = 1;
+
+static int last_carrier_movement(kCarrierMoving);
+static int last_carrier_velocity(0);
+static int last_carrier_direction(kMovingBacward);
+
 template<typename ... Args>
 std::string string_format(const std::string& format, Args ... args)
 {
@@ -35,6 +45,9 @@ CgppcDlg::CgppcDlg(CWnd* pParent /*=nullptr*/)
 	, test_running(false)
 	, carrier_speed(_T(""))
 	, zStatus(kEventZIdle)
+	, event_selection(0)
+	, hallsensor_start_pos(_T(""))
+	, hallsensor_finishi_pos(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -89,6 +102,15 @@ void CgppcDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDIT_DELAY6, delay[kStep6]);
 	DDX_Text(pDX, IDC_EDIT_DELAY7, delay[kStep7]);
 	DDX_Text(pDX, IDC_EDIT_DELAY8, delay[kStep8]);
+	DDX_Radio(pDX, IDC_RADIO_ZDONGLE, event_selection);
+
+	DDX_Text(pDX, IDC_EDIT_HALLSENSOR_PORT, hallsensor_port);
+	DDX_Text(pDX, IDC_EDIT_ANALYZER_IP, analyzer_ip);
+	DDX_Text(pDX, IDC_EDIT_ANALYZER_PORT, analyzer_port);
+	DDX_Control(pDX, IDC_CHECK_ANALYZER, analyzer_check);
+	DDX_Text(pDX, IDC_EDIT_START_POS, hallsensor_start_pos);
+	DDX_Text(pDX, IDC_EDIT_FINISHI_POS, hallsensor_finishi_pos);
+	DDX_Control(pDX, IDC_COMBO_RUNMODE, combo_runmode);
 }
 
 BEGIN_MESSAGE_MAP(CgppcDlg, CDialogEx)
@@ -113,8 +135,6 @@ BEGIN_MESSAGE_MAP(CgppcDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_S8_ADD_GROUP, &CgppcDlg::OnBnClickedButtonS8AddGroup)
 	ON_BN_CLICKED(IDC_BUTTON_S8_DEL_GROUP, &CgppcDlg::OnBnClickedButtonS8DelGroup)
 	ON_BN_CLICKED(IDC_BUTTON_TEST, &CgppcDlg::OnBnClickedButtonTest)
-	ON_BN_CLICKED(IDC_BUTTON_SERIAL_ALL_CONNECT, &CgppcDlg::OnBnClickedButtonSerialAllConnect)
-	ON_BN_CLICKED(IDC_BUTTON_SERIAL_ALL_DISCONNECT, &CgppcDlg::OnBnClickedButtonSerialAllDisconnect)
 	ON_BN_CLICKED(IDC_BUTTON_DELAY_CALC, &CgppcDlg::OnBnClickedButtonDelayCalc)
 	ON_BN_CLICKED(IDC_BUTTON_LOAD, &CgppcDlg::OnBnClickedButtonLoad)
 	ON_BN_CLICKED(IDC_BUTTON_SAVE, &CgppcDlg::OnBnClickedButtonSave)
@@ -140,8 +160,14 @@ BEGIN_MESSAGE_MAP(CgppcDlg, CDialogEx)
 	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_LOADCELL_2, &CgppcDlg::OnCbnSelchangeComboSerialLoadcell2)
 	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_LOADCELL_3, &CgppcDlg::OnCbnSelchangeComboSerialLoadcell3)
 	ON_CBN_SELCHANGE(IDC_COMBO_SERIAL_DONGLE, &CgppcDlg::OnCbnSelchangeComboSerialDongle)
+	ON_CONTROL_RANGE(BN_CLICKED, IDC_RADIO_ZDONGLE, IDC_RADIO_HALLSENSOR, &CgppcDlg::OnBnClickedRadio)
+	ON_EN_CHANGE(IDC_EDIT_HALLSENSOR_PORT, &CgppcDlg::OnChangeEditHallsensorPort)
+	ON_EN_CHANGE(IDC_EDIT_ANALYZER_IP, &CgppcDlg::OnChangeEditAnalyzerIp)
+	ON_EN_CHANGE(IDC_EDIT_ANALYZER_PORT, &CgppcDlg::OnChangeEditAnalyzerPort)
+	ON_BN_CLICKED(IDC_CHECK_ANALYZER, &CgppcDlg::OnClickedCheckAnalyzer)
+	ON_EN_CHANGE(IDC_EDIT_START_POS, &CgppcDlg::OnChangeEditStartPos)
+	ON_EN_CHANGE(IDC_EDIT_FINISHI_POS, &CgppcDlg::OnChangeEditFinishiPos)
 END_MESSAGE_MAP()
-
 
 // CgppcDlg 메시지 처리기
 
@@ -166,8 +192,21 @@ BOOL CgppcDlg::OnInitDialog()
 
 	zdongle.Init(ZDongleReceiveCB, this);
 
+	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
+	{ 
+#ifdef __DEBUG_CONSOLE__
+		cout << "[ WINSOCK INIT ERROR ]" << endl;
+#endif
+	}
+
+	udp_hallsensor.Init(HallSensorReceiveCB, this);
+
 	InitListCtrls();
 	InitComboSerial();
+	combo_runmode.AddString(_T("데이터 수집"));
+	combo_runmode.AddString(_T("반복 테스트"));
+	combo_runmode.SetCurSel(0);
+	combo_runmode.GetCurSel();
 
 	carrier_speed = _T("0");
 	for (int i = 0 ; i < kStepMax; i++)
@@ -176,16 +215,14 @@ BOOL CgppcDlg::OnInitDialog()
 		delay[i] = _T("0");
 	}
 
-	LoadJSonOfSteps();
-	UpdateData(FALSE);
+	CString strPathName;
+	GetDlgItemText(IDC_EDIT_FILE, strPathName);
+	CT2CA convertedString(strPathName);
+	string filepath(convertedString);
 
-	if (WSAStartup(MAKEWORD(2, 2), &wsa) == 0)
-	{
-		udp_hallsensor.OpenSocket();
-		udp_analyzer.OpenSocket();
-		udp_analyzer.Send("adf");
-	}
-	
+	LoadJSonOfSteps(filepath);
+
+	UpdateData(FALSE);
 
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
@@ -302,7 +339,6 @@ void CgppcDlg::InitComboSerial()
 
 	RegCloseKey(h_CommKey);
 	
-	
 	CString section;
 	for (int i = 0; i < kSerialGppCount; i++)
 	{
@@ -312,6 +348,7 @@ void CgppcDlg::InitComboSerial()
 		int pos = discovered_serial[port];	
 		if (pos > 0) { combo_gpp[i].SetCurSel(pos-1); }
 	}
+
 	for (int i = 0; i < kSerialLoadcellCount; i++)
 	{
 		section.Format(_T("LOADCELL_SERIAL_%d"), i + 1);
@@ -325,6 +362,25 @@ void CgppcDlg::InitComboSerial()
 	CString port = IniConfig::Read(section, IniConfig::kKeyPort);
 	int pos = discovered_serial[port];
 	if (pos > 0) { combo_dongle.SetCurSel(pos - 1); }
+
+	section.Format(_T("ETC"));
+	CString value = IniConfig::Read(section, IniConfig::kKeyEventSelection);
+	event_selection = _ttoi(value);
+
+	hallsensor_port = IniConfig::Read(section, IniConfig::kKeyHallSensorPort);
+	hallsensor_start_pos = IniConfig::Read(section, IniConfig::kKeyHallSensorStartPos);
+	hallsensor_finishi_pos = IniConfig::Read(section, IniConfig::kKeyHallSensorFinishiPos);
+
+	value = IniConfig::Read(section, IniConfig::kKeyAnalyzerFlag);
+	analyzer_check.SetCheck(_ttoi(value));
+	
+	analyzer_ip = IniConfig::Read(section, IniConfig::kKeyAnalyzerIp);
+	analyzer_port = IniConfig::Read(section, IniConfig::kKeyAnalyzerPort);
+	
+	CString json_file = IniConfig::Read(section, IniConfig::kKeyJsonFile);
+	if (json_file.GetLength() < 1) { json_file = kJsonfile.c_str(); }
+	SetDlgItemText(IDC_EDIT_FILE, json_file);
+	((CEdit*)GetDlgItem(IDC_EDIT_FILE))->SetSel(0, -1);
 }
 
 /***** Begin UI - Step ******/
@@ -451,14 +507,14 @@ void CgppcDlg::RemoveStepTableRow(const int step_number)
 	}
 }
 
-afx_msg void CgppcDlg::LoadJSonOfSteps()
+afx_msg void CgppcDlg::LoadJSonOfSteps(const string& filepath)
 {
 	for (int i = 0; i < kStepMax; i++)
 	{ 	
 		listctrl_of_steptable[i].DeleteAllItems();
 	}	// Remove All
 
-	ifstream jsonFile(kJsonfile);
+	ifstream jsonFile(filepath);
 
 	Json::CharReaderBuilder builder;
 	builder["collectComments"] = false;
@@ -558,10 +614,10 @@ void CgppcDlg::SelchangeComboSerial(const int combobox_number)
 	IniConfig::Write(section, IniConfig::kKeyPort, port);
 }
 
-void CgppcDlg::SaveJSonOfSteps()
+void CgppcDlg::SaveJSonOfSteps(const string& filepath)
 {
 	ofstream jsonFile;
-	jsonFile.open(kJsonfile);
+	jsonFile.open(filepath);
 
 	Json::Value root;
 	
@@ -675,6 +731,23 @@ void CgppcDlg::OnBnClickedButtonS8DelGroup() { RemoveStepTableRow(kStep8); }
 
 /****** End UI - Step ******/
 
+afx_msg void CgppcDlg::OnBnClickedRadio(UINT uiID)
+{
+	//UpdateData(TRUE);
+
+	switch (uiID)
+	{
+	case IDC_RADIO_ZDONGLE: event_selection = 0; break;
+	case IDC_RADIO_HALLSENSOR: event_selection = 1; break;
+	default: return;
+	}
+
+	CString value;
+	value.Format(_T("%d"), event_selection);
+	IniConfig::Write(_T("ETC"), IniConfig::kKeyEventSelection, value);
+	//cout << event_selection << endl;
+}
+
 void CgppcDlg::OnBnClickedButtonDelayCalc()
 {
 	UpdateData(TRUE);
@@ -702,14 +775,14 @@ void CgppcDlg::OnBnClickedButtonSerialAllConnect()
 		IDC_BUTTON_SERIAL_GPP_01, IDC_BUTTON_SERIAL_GPP_02, IDC_BUTTON_SERIAL_GPP_03, IDC_BUTTON_SERIAL_GPP_04, IDC_BUTTON_SERIAL_GPP_05, IDC_BUTTON_SERIAL_GPP_06,
 		IDC_BUTTON_SERIAL_GPP_07, IDC_BUTTON_SERIAL_GPP_08, IDC_BUTTON_SERIAL_GPP_09, IDC_BUTTON_SERIAL_GPP_10, IDC_BUTTON_SERIAL_GPP_11, IDC_BUTTON_SERIAL_GPP_12,
 		IDC_BUTTON_SERIAL_GPP_13, IDC_BUTTON_SERIAL_GPP_14, IDC_BUTTON_SERIAL_GPP_15, IDC_BUTTON_SERIAL_GPP_16, IDC_BUTTON_SERIAL_GPP_17, IDC_BUTTON_SERIAL_GPP_18,
-		IDC_BUTTON_SERIAL_LOADCELL_1, IDC_BUTTON_SERIAL_LOADCELL_2, IDC_BUTTON_SERIAL_LOADCELL_3, IDC_BUTTON_SERIAL_DONGLE
+		IDC_BUTTON_SERIAL_LOADCELL_1, IDC_BUTTON_SERIAL_LOADCELL_2, IDC_BUTTON_SERIAL_LOADCELL_3
 	};
 
 	const int port[] = {
 		IDC_COMBO_SERIAL_GPP_01, IDC_COMBO_SERIAL_GPP_02, IDC_COMBO_SERIAL_GPP_03, IDC_COMBO_SERIAL_GPP_04, IDC_COMBO_SERIAL_GPP_05, IDC_COMBO_SERIAL_GPP_06,
 		IDC_COMBO_SERIAL_GPP_07, IDC_COMBO_SERIAL_GPP_08, IDC_COMBO_SERIAL_GPP_09, IDC_COMBO_SERIAL_GPP_10, IDC_COMBO_SERIAL_GPP_11, IDC_COMBO_SERIAL_GPP_12,
 		IDC_COMBO_SERIAL_GPP_13, IDC_COMBO_SERIAL_GPP_14, IDC_COMBO_SERIAL_GPP_15, IDC_COMBO_SERIAL_GPP_16, IDC_COMBO_SERIAL_GPP_17, IDC_COMBO_SERIAL_GPP_18,
-		IDC_COMBO_SERIAL_LOADCELL_1, IDC_COMBO_SERIAL_LOADCELL_2, IDC_COMBO_SERIAL_LOADCELL_3, IDC_COMBO_SERIAL_DONGLE
+		IDC_COMBO_SERIAL_LOADCELL_1, IDC_COMBO_SERIAL_LOADCELL_2, IDC_COMBO_SERIAL_LOADCELL_3
 	};
 
 	const int count = sizeof(ids) / sizeof(*ids);
@@ -736,23 +809,14 @@ void CgppcDlg::OnBnClickedButtonSerialAllConnect()
 				}
 			}
 		}
-		else if (i < kSerialGppCount + kSerialLoadcellCount)
+		else
 		{
 			if (!loadcell[i - kSerialGppCount].IsOpen())
 			{
 				result = loadcell[i - kSerialGppCount].ConnectSerial(strPort);
 			}
-		}
-		else
-		{
-			if (!zdongle.IsOpen())
-			{
-				result = zdongle.ConnectSerial(strPort);
-			}
-		}
+		}		
 		
-		//CT2CA pszConvertedAnsiString(strPort);
-		//cout << pszConvertedAnsiString << " : " << result <<  endl;
 		if (result)
 		{ 
 			GetDlgItem(port[i])->EnableWindow(FALSE);
@@ -760,6 +824,49 @@ void CgppcDlg::OnBnClickedButtonSerialAllConnect()
 			GetDlgItem(ids[i])->SetWindowTextW(_T("연결됨"));
 		}
 	}
+
+	switch (event_selection)
+	{
+	case kEventZDongle:
+		if (!zdongle.IsOpen())
+		{
+			CString strPort;
+			GetDlgItem(IDC_COMBO_SERIAL_DONGLE)->GetWindowTextW(strPort);
+			if (zdongle.ConnectSerial(strPort))
+			{
+				GetDlgItem(IDC_BUTTON_SERIAL_DONGLE)->EnableWindow(FALSE);
+				GetDlgItem(IDC_BUTTON_SERIAL_DONGLE)->SetWindowTextW(_T("연결됨"));
+			}
+		}
+		break;
+
+	case kEventHallSensor:
+		if (udp_hallsensor.OpenSocket(_ttoi(hallsensor_port)))
+		{
+			start_position = _ttoi(hallsensor_start_pos);
+			finishi_position = _ttoi(hallsensor_finishi_pos);
+		}
+		break;
+	}
+
+	GetDlgItem(IDC_COMBO_SERIAL_DONGLE)->EnableWindow(FALSE);
+	GetDlgItem(IDC_EDIT_HALLSENSOR_PORT)->EnableWindow(FALSE);
+	GetDlgItem(IDC_EDIT_START_POS)->EnableWindow(FALSE);
+	GetDlgItem(IDC_EDIT_FINISHI_POS)->EnableWindow(FALSE);
+		
+	GetDlgItem(IDC_RADIO_ZDONGLE)->EnableWindow(FALSE);
+	GetDlgItem(IDC_RADIO_HALLSENSOR)->EnableWindow(FALSE);
+
+	if (analyzer_check.GetCheck())
+	{
+		CT2CA convertedString(analyzer_ip);
+		std::string target_ip(convertedString);
+		udp_analyzer.OpenSocket(_ttoi(analyzer_port), target_ip);
+	}
+
+	GetDlgItem(IDC_CHECK_ANALYZER)->EnableWindow(FALSE);
+	GetDlgItem(IDC_EDIT_ANALYZER_IP)->EnableWindow(FALSE);
+	GetDlgItem(IDC_EDIT_ANALYZER_PORT)->EnableWindow(FALSE);
 }
 
 void CgppcDlg::OnBnClickedButtonSerialAllDisconnect()
@@ -768,15 +875,43 @@ void CgppcDlg::OnBnClickedButtonSerialAllDisconnect()
 		IDC_BUTTON_SERIAL_GPP_01, IDC_BUTTON_SERIAL_GPP_02, IDC_BUTTON_SERIAL_GPP_03, IDC_BUTTON_SERIAL_GPP_04, IDC_BUTTON_SERIAL_GPP_05, IDC_BUTTON_SERIAL_GPP_06,
 		IDC_BUTTON_SERIAL_GPP_07, IDC_BUTTON_SERIAL_GPP_08, IDC_BUTTON_SERIAL_GPP_09, IDC_BUTTON_SERIAL_GPP_10, IDC_BUTTON_SERIAL_GPP_11, IDC_BUTTON_SERIAL_GPP_12,
 		IDC_BUTTON_SERIAL_GPP_13, IDC_BUTTON_SERIAL_GPP_14, IDC_BUTTON_SERIAL_GPP_15, IDC_BUTTON_SERIAL_GPP_16, IDC_BUTTON_SERIAL_GPP_17, IDC_BUTTON_SERIAL_GPP_18,
-		IDC_BUTTON_SERIAL_LOADCELL_1, IDC_BUTTON_SERIAL_LOADCELL_2, IDC_BUTTON_SERIAL_LOADCELL_3, IDC_BUTTON_SERIAL_DONGLE
+		IDC_BUTTON_SERIAL_LOADCELL_1, IDC_BUTTON_SERIAL_LOADCELL_2, IDC_BUTTON_SERIAL_LOADCELL_3
 	};
 
 	const int port[] = {
 		IDC_COMBO_SERIAL_GPP_01, IDC_COMBO_SERIAL_GPP_02, IDC_COMBO_SERIAL_GPP_03, IDC_COMBO_SERIAL_GPP_04, IDC_COMBO_SERIAL_GPP_05, IDC_COMBO_SERIAL_GPP_06,
 		IDC_COMBO_SERIAL_GPP_07, IDC_COMBO_SERIAL_GPP_08, IDC_COMBO_SERIAL_GPP_09, IDC_COMBO_SERIAL_GPP_10, IDC_COMBO_SERIAL_GPP_11, IDC_COMBO_SERIAL_GPP_12,
 		IDC_COMBO_SERIAL_GPP_13, IDC_COMBO_SERIAL_GPP_14, IDC_COMBO_SERIAL_GPP_15, IDC_COMBO_SERIAL_GPP_16, IDC_COMBO_SERIAL_GPP_17, IDC_COMBO_SERIAL_GPP_18,
-		IDC_COMBO_SERIAL_LOADCELL_1, IDC_COMBO_SERIAL_LOADCELL_2, IDC_COMBO_SERIAL_LOADCELL_3, IDC_COMBO_SERIAL_DONGLE
+		IDC_COMBO_SERIAL_LOADCELL_1, IDC_COMBO_SERIAL_LOADCELL_2, IDC_COMBO_SERIAL_LOADCELL_3
 	};
+
+	switch (event_selection)
+	{
+	case kEventZDongle:
+		zdongle.DisconnectSerial();
+		GetDlgItem(IDC_BUTTON_SERIAL_DONGLE)->EnableWindow(TRUE);
+		GetDlgItem(IDC_BUTTON_SERIAL_DONGLE)->SetWindowTextW(_T("끊어짐"));
+		break;
+
+	case kEventHallSensor:
+		udp_hallsensor.CloseSocket();
+		break;
+	}
+	GetDlgItem(IDC_COMBO_SERIAL_DONGLE)->EnableWindow(TRUE);
+	GetDlgItem(IDC_EDIT_HALLSENSOR_PORT)->EnableWindow(TRUE);
+	GetDlgItem(IDC_EDIT_START_POS)->EnableWindow(TRUE);
+	GetDlgItem(IDC_EDIT_FINISHI_POS)->EnableWindow(TRUE);
+	GetDlgItem(IDC_RADIO_ZDONGLE)->EnableWindow(TRUE);
+	GetDlgItem(IDC_RADIO_HALLSENSOR)->EnableWindow(TRUE);
+	
+	if (analyzer_check.GetCheck())
+	{
+		udp_analyzer.CloseSocket();
+	}
+
+	GetDlgItem(IDC_CHECK_ANALYZER)->EnableWindow(TRUE);
+	GetDlgItem(IDC_EDIT_ANALYZER_IP)->EnableWindow(TRUE);
+	GetDlgItem(IDC_EDIT_ANALYZER_PORT)->EnableWindow(TRUE);
 
 	const int count = sizeof(ids) / sizeof(*ids);
 	for (int i = 0; i < count; i++)
@@ -786,15 +921,11 @@ void CgppcDlg::OnBnClickedButtonSerialAllDisconnect()
 		{
 			result = power_controller[i].DisconnectSerial();
 		}
-		else if (i < kSerialGppCount + kSerialLoadcellCount)
+		else
 		{
 			result = loadcell[i - kSerialGppCount].DisconnectSerial();
 		}
-		else
-		{
-			result = zdongle.DisconnectSerial();
-		}
-
+		
 		if (result)
 		{
 			GetDlgItem(port[i])->EnableWindow(TRUE);
@@ -807,8 +938,48 @@ void CgppcDlg::OnBnClickedButtonSerialAllDisconnect()
 void CgppcDlg::OnBnClickedButtonTest()
 {	
 	stepfull.clear();
+	TestStart(!test_running);
 	test_running = !test_running;
-	TestStart(test_running);
+}
+
+void CgppcDlg::OnChangeEditHallsensorPort()
+{
+	UpdateData(TRUE);
+	IniConfig::Write(_T("ETC"), IniConfig::kKeyHallSensorPort, hallsensor_port);
+	//CT2CA convertedString(hallsensor_port);
+	//std::string s(convertedString);
+}
+
+void CgppcDlg::OnChangeEditAnalyzerIp()
+{
+	UpdateData(TRUE);
+	IniConfig::Write(_T("ETC"), IniConfig::kKeyAnalyzerIp, analyzer_ip);
+}
+
+void CgppcDlg::OnChangeEditAnalyzerPort()
+{
+	UpdateData(TRUE);
+	IniConfig::Write(_T("ETC"), IniConfig::kKeyAnalyzerPort, analyzer_port);
+}
+
+void CgppcDlg::OnClickedCheckAnalyzer()
+{
+	CString check;
+	check.Format(_T("%d"), analyzer_check.GetCheck());
+
+	IniConfig::Write(_T("ETC"), IniConfig::kKeyAnalyzerFlag, check);
+}
+
+void CgppcDlg::OnChangeEditStartPos()
+{
+	UpdateData(TRUE);
+	IniConfig::Write(_T("ETC"), IniConfig::kKeyHallSensorStartPos, hallsensor_start_pos);
+}
+
+void CgppcDlg::OnChangeEditFinishiPos()
+{
+	UpdateData(TRUE);
+	IniConfig::Write(_T("ETC"), IniConfig::kKeyHallSensorFinishiPos, hallsensor_finishi_pos);
 }
 
 void CgppcDlg::TestStart(BOOL start)
@@ -825,23 +996,18 @@ void CgppcDlg::TestStart(BOOL start)
 		IDC_EDIT_DISTANCE5, IDC_EDIT_DISTANCE6, IDC_EDIT_DISTANCE7, IDC_EDIT_DISTANCE8,
 		IDC_EDIT_DELAY1, IDC_EDIT_DELAY2, IDC_EDIT_DELAY3, IDC_EDIT_DELAY4,
 		IDC_EDIT_DELAY5, IDC_EDIT_DELAY6, IDC_EDIT_DELAY7, IDC_EDIT_DELAY8,
-/*
-		IDC_BUTTON_SERIAL_GPP_01, IDC_BUTTON_SERIAL_GPP_02, IDC_BUTTON_SERIAL_GPP_03, IDC_BUTTON_SERIAL_GPP_04, IDC_BUTTON_SERIAL_GPP_05, IDC_BUTTON_SERIAL_GPP_06,
-		IDC_BUTTON_SERIAL_GPP_07, IDC_BUTTON_SERIAL_GPP_08, IDC_BUTTON_SERIAL_GPP_09, IDC_BUTTON_SERIAL_GPP_10, IDC_BUTTON_SERIAL_GPP_11, IDC_BUTTON_SERIAL_GPP_12,
-		IDC_BUTTON_SERIAL_GPP_13, IDC_BUTTON_SERIAL_GPP_14, IDC_BUTTON_SERIAL_GPP_15, IDC_BUTTON_SERIAL_GPP_16, IDC_BUTTON_SERIAL_GPP_17, IDC_BUTTON_SERIAL_GPP_18,
-		IDC_BUTTON_SERIAL_LOADCELL_1, IDC_BUTTON_SERIAL_LOADCELL_2, IDC_BUTTON_SERIAL_LOADCELL_3, IDC_BUTTON_SERIAL_DONGLE,
-	
-		IDC_COMBO_SERIAL_GPP_01, IDC_COMBO_SERIAL_GPP_02, IDC_COMBO_SERIAL_GPP_03, IDC_COMBO_SERIAL_GPP_04, IDC_COMBO_SERIAL_GPP_05, IDC_COMBO_SERIAL_GPP_06,
-		IDC_COMBO_SERIAL_GPP_07, IDC_COMBO_SERIAL_GPP_08, IDC_COMBO_SERIAL_GPP_09, IDC_COMBO_SERIAL_GPP_10, IDC_COMBO_SERIAL_GPP_11, IDC_COMBO_SERIAL_GPP_12,
-		IDC_COMBO_SERIAL_GPP_13, IDC_COMBO_SERIAL_GPP_14, IDC_COMBO_SERIAL_GPP_15, IDC_COMBO_SERIAL_GPP_16, IDC_COMBO_SERIAL_GPP_17, IDC_COMBO_SERIAL_GPP_18,
-		IDC_COMBO_SERIAL_LOADCELL_1, IDC_COMBO_SERIAL_LOADCELL_2, IDC_COMBO_SERIAL_LOADCELL_3, IDC_COMBO_SERIAL_DONGLE,
-	};
-*/
-		IDC_BUTTON_SERIAL_ALL_CONNECT, IDC_BUTTON_SERIAL_ALL_DISCONNECT
+
+		IDC_BUTTON_LOAD, IDC_BUTTON_SAVE, IDC_COMBO_RUNMODE
 	};
 
 	if (start)
 	{
+		last_carrier_movement = kCarrierMoving;
+		last_carrier_velocity = 0;
+		last_carrier_direction = kMovingBacward;
+
+		OnBnClickedButtonSerialAllConnect();
+
 		trycount = 0;
 		// update step_groups
 		UpdateStepGroups();
@@ -856,18 +1022,6 @@ void CgppcDlg::TestStart(BOOL start)
 		}
 
 		csv.Open();
-		string row;
-		row = "index";
-		row += ",time";
-		row += ",step";
-		row += ",m1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11";
-		row += ",m12,m13,m14,m15,m16,m17,m18,m19,m20,m21,m22";
-		row += ",m23,m24,m25,m26,m27,m28,m29,m30,m31,m32,m33";
-		row += ",w1,w2,w3,w4,w5,w6";
-		row += ",w7,w8,w9,w10,w11,w12";
-		row += ",w13,w14,w15,w16,w17,w18";
-		row += "\n";
-		csv.Write(row);
 
 		for (int i = kStep1; i < kStepMax; i++) { TestAddSchedule(i); }
 		zStatus = kEventZIdle;
@@ -877,6 +1031,8 @@ void CgppcDlg::TestStart(BOOL start)
 	}
 	else
 	{
+		OnBnClickedButtonSerialAllDisconnect();
+
 		zStatus = kEventZIdle;
 		for (int i = 0; i < kSerialGppCount; i++)
 		{
@@ -892,9 +1048,9 @@ void CgppcDlg::TestStart(BOOL start)
 	}
 
 	const int count = sizeof(ids) / sizeof(*ids);
-	for (int i = 0; i < count; i++) { GetDlgItem(ids[i])->EnableWindow(!test_running); }
+	for (int i = 0; i < count; i++) { GetDlgItem(ids[i])->EnableWindow(!start); }
 	
-	GetDlgItem(IDC_BUTTON_TEST)->SetWindowTextW(test_running ? _T("시험 중지") : _T("시험 시작"));
+	GetDlgItem(IDC_BUTTON_TEST)->SetWindowTextW(start ? _T("중지") : _T("시작"));
 }
 
 void CgppcDlg::TestAddSchedule(int step)
@@ -968,12 +1124,36 @@ BOOL CgppcDlg::TestNextGain()
 
 void CgppcDlg::OnBnClickedButtonLoad()
 {
-	LoadJSonOfSteps();
+	//CString str = _T("All files(*.*)|*.*|"); // 모든 파일 표시
+	CString str = _T("json File (*.json)|*.json|"); // 모든 파일 표시
+	// _T("Excel 파일 (*.xls, *.xlsx) |*.xls; *.xlsx|"); 와 같이 확장자를 제한하여 표시할 수 있음
+	CFileDialog dlg(TRUE, _T("*.json"), NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, str, this);
+
+	if (dlg.DoModal() == IDOK)
+	{
+		CString strPathName = dlg.GetPathName();
+		// 파일 경로를 가져와 사용할 경우, Edit Control에 값 저장
+		SetDlgItemText(IDC_EDIT_FILE, strPathName);
+		((CEdit*)GetDlgItem(IDC_EDIT_FILE))->SetSel(0, -1);
+
+		IniConfig::Write(_T("ETC"), IniConfig::kKeyJsonFile, strPathName);
+	}
+
+	CString strPathName;
+	GetDlgItemText(IDC_EDIT_FILE, strPathName);
+	CT2CA convertedString(strPathName);
+	string filepath(convertedString);
+
+	LoadJSonOfSteps(filepath);
 }
 
 void CgppcDlg::OnBnClickedButtonSave()
 {
-	SaveJSonOfSteps();
+	CString strPathName;
+	GetDlgItemText(IDC_EDIT_FILE, strPathName);
+	CT2CA convertedString(strPathName);
+	string filepath(convertedString);
+	SaveJSonOfSteps(filepath);
 }
 
 void CgppcDlg::ZDongleReceiveCB(void* data, void* context)
@@ -1038,6 +1218,108 @@ void CgppcDlg::PowerContollerCB(void* data, void* context)
 	if (!ctx->test_running) { return; }
 }
 
+void CgppcDlg::HallSensorReceiveCB(void* data, void* context)
+{
+	CgppcDlg* ctx = (CgppcDlg*)context;
+	if (!ctx->test_running) { return; }
+
+	enum ePacketIndex {
+		kIdxTrackState = 0,
+		kIdxCarrierState,
+		kIdxCarrierPosition,
+		kIdxCarrierAcceleration,
+		kIdxCarrierVelocity,
+		kIdxHallSensorBegin,
+	};
+	
+	string* line = (string*)data;
+	stringstream ss(*line);
+	string temp;
+	vector<string> split;
+
+	while (getline(ss, temp, ',')) {
+		split.push_back(temp);
+		if (split.size() > kIdxCarrierVelocity) { break; }
+	}
+
+	if (split.size() < kIdxHallSensorBegin || split[kIdxTrackState].compare("CM_TRACK_ACTIVE") != 0)
+	{
+		cout << "error : " << "size = " << split.size() << endl;
+		return;
+	}
+
+	int carrier_movement = (split[kIdxCarrierState].compare("CM_CARRIER_MOVING") == 0) ? kCarrierMoving : kCarrierStopped;
+	int carrier_velocity = atoi(split[kIdxCarrierVelocity].c_str());
+
+	int carrier_direction(kMovingBacward);
+	if (carrier_movement == kCarrierMoving)
+	{
+		carrier_direction = (carrier_velocity > 0) ? kMovingForward :
+							(carrier_velocity < 0) ? kMovingBacward : last_carrier_direction;
+	}
+	else
+	{
+		if (last_carrier_movement == kCarrierMoving)
+		{
+			carrier_direction = (last_carrier_direction == kMovingForward) ? kMovingBacward : kMovingForward;
+		}
+	}
+
+	//cout << "L. m = " << last_carrier_movement << ", v = " << last_carrier_velocity << ", d = " << last_carrier_direction << endl;
+	//cout << "C. m = " << carrier_movement << ", v = " << carrier_velocity << ", d = " << carrier_direction << endl << endl;
+
+	if (last_carrier_movement == kCarrierStopped && carrier_movement == kCarrierMoving)
+	{
+		//cout << "1.1 = " << carrier_direction << endl;
+		if (carrier_direction == kMovingForward)
+		{
+			//cout << "1.2" << endl;
+			::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZStart, (LPARAM)NULL);
+		}
+	}
+	else if (last_carrier_movement == kCarrierMoving && carrier_movement == kCarrierStopped)
+	{
+		//cout << "2.1 = " << carrier_direction << endl;
+		if (carrier_direction == kMovingBacward)
+		{
+			//cout << "2.2" << endl;
+			::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZFinish, (LPARAM)NULL);
+		}
+	}
+
+
+	last_carrier_direction = carrier_direction;
+	last_carrier_movement = carrier_movement;
+	last_carrier_velocity = carrier_velocity;
+
+	/*		
+	if (ctx->zStatus != kEventZStart)
+	{
+		if (split[kIdxCarrierState].compare("CM_CARRIER_MOVING") == 0 && velocity > 0)
+		{
+			int carrier_position = atoi(split[kIdxCarrierPosition].c_str());
+			int value = abs(carrier_position - ctx->start_position);
+			if (value < kPositionScale)
+			{
+				::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZStart, (LPARAM)NULL);
+			}
+		}
+	}
+	else if (ctx->zStatus != kEventZFinish)
+	{
+		if (split[kIdxCarrierState].compare("CM_CARRIER_STOPPED") == 0)
+		{
+			int carrier_position = atoi(split[kIdxCarrierPosition].c_str());
+			int value = abs(carrier_position - ctx->finishi_position);
+			if (value < kPositionScale)
+			{
+				::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZFinish, (LPARAM)NULL);
+			}
+		}
+	}
+	*/
+}
+
 afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 {
 	int event = (int)wParam;
@@ -1068,6 +1350,9 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 			}
 		}
 
+		// section
+		string section = (step_value < 5) ? "A," : "B,";
+
 		// step
 		string step = to_string(step_value);
 		
@@ -1085,11 +1370,12 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 			if (i < kSerialLoadcellCount - 1) { weight += ","; }
 		}
 
-		string line = index + "," + time + "," + step + "," + current + weight + "\n";
+		string line = index + "," + time + "," + section + step + "," + current + weight + "\n";
 		stepfull += line;
 
+		if (analyzer_check.GetCheck()) { udp_analyzer.Send(UDP_Analyzer::kMsgRunning + weight + "\n"); }
+
 #ifdef __DEBUG_CONSOLE__
-		udp_analyzer.Send(weight + "\n");
 		cout << "[ STEP - " << step_value << " ] " << line;
 #endif
 	}
@@ -1110,6 +1396,24 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 					power_controller[i].StartScheduler(j);
 				}
 			}
+		}
+
+		if (analyzer_check.GetCheck())
+		{ 
+			string weight;
+			for (int i = 0; i < kSerialLoadcellCount; i++)
+			{
+				for (int j = 0; j < 6; j++)
+				{
+					int w = loadcell[i].GetWeight(j);
+					weight += to_string(w);
+					if (j < 5) { weight += ","; }
+				}
+
+				if (i < kSerialLoadcellCount - 1) { weight += ","; }
+			}
+
+			udp_analyzer.Send(UDP_Analyzer::kMsgStart + weight + "\n"); 
 		}
 	}
 	else if (event == kEventZReady)
@@ -1147,7 +1451,7 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 	}
 	else if (event == kEventZFinish)
 	{
-		if (zStatus == kEventZFinish) { return 1; }
+		if (zStatus == kEventZFinish || zStatus != kEventZStart) { return 1; }
 		zStatus = event;
 #ifdef __DEBUG_CONSOLE__
 		cout << endl << "[ Z-FINISH ]" << endl;
@@ -1176,6 +1480,24 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 			}
 		}
 
+		if (analyzer_check.GetCheck())
+		{
+			string weight;
+			for (int i = 0; i < kSerialLoadcellCount; i++)
+			{
+				for (int j = 0; j < 6; j++)
+				{
+					int w = loadcell[i].GetWeight(j);
+					weight += to_string(w);
+					if (j < 5) { weight += ","; }
+				}
+
+				if (i < kSerialLoadcellCount - 1) { weight += ","; }
+			}
+
+			udp_analyzer.Send(UDP_Analyzer::kMsgFinish + weight + "\n");
+		}
+
 		if (csv.isOpen())
 		{
 			csv.Write(stepfull);
@@ -1183,19 +1505,31 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 
 		stepfull.clear();
 
-		BOOL result = TestNextGain();
-		if (!result)
+		if (combo_runmode.GetCurSel() == 0) // 0 : 데이터 수집, 1 : 반복 테스트
 		{
+			BOOL result = TestNextGain();
+			if (!result)
+			{
 #ifdef __DEBUG_CONSOLE__
-			cout << endl << "[ Z-END ]" << endl;
+				cout << endl << "[ Z-END ]" << endl;
 #endif
-			test_running = FALSE;
-			TestStart(test_running);
-			return 1;
+				test_running = FALSE;
+				TestStart(test_running);
+				return 1;
+			}
 		}
 
 		for (int i = kStep1; i < kStepMax; i++) { TestAddSchedule(i); }
+
+		// 10개씩 잘라서
+		if (trycount % 10 == 0)
+		{
+			csv.Close();
+			csv.Open();
+		}	
 	}
 	
 	return 1;
 }
+
+

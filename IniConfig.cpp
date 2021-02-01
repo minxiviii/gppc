@@ -12,6 +12,17 @@ const CString IniConfig::kKeyDatabits(_T("DATABITS"));
 const CString IniConfig::kKeyStopbits(_T("STOPBITS"));
 const CString IniConfig::kKeyFlowControl(_T("FLOWCONTROL"));
 
+const CString IniConfig::kKeyEventSelection(_T("EVENT_SELECTION"));
+const CString IniConfig::kKeyHallSensorPort(_T("HALLSENSOR_PORT"));
+const CString IniConfig::kKeyHallSensorStartPos(_T("HALLSENSOR_START_POS"));
+const CString IniConfig::kKeyHallSensorFinishiPos(_T("HALLSENSOR_FINISHI_POS"));
+const CString IniConfig::kKeyAnalyzerFlag(_T("ANALYZER_FLAG"));
+const CString IniConfig::kKeyAnalyzerIp(_T("ANALYZER_IP"));
+const CString IniConfig::kKeyAnalyzerPort(_T("ANALYZER_PORT"));
+
+const CString IniConfig::kKeyJsonFile(_T("JSON_FILE"));
+
+
 void IniConfig::Write(const CString& section, const CString& key, const CString& value)
 {
 	WritePrivateProfileString(section, key, value, kFilepath);

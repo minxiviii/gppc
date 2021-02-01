@@ -75,22 +75,35 @@ void UDP_HallSensor::ThreadClose()
 	recv_thread = INVALID_HANDLE_VALUE;
 }
 
+#include <sstream>
+//#include <iostream>
+//#include <vector>
+//using namespace std;
+
 DWORD WINAPI UDP_HallSensor::RecvThread(void* data)
 {
 	UDP_HallSensor* hallSensor = (UDP_HallSensor*)data;
 	
 	const int kBufferSize = 512;
 	char buffer[kBufferSize] = { 0, };
-	DWORD receive_length(0);
+		
 	SOCKADDR_IN clientaddr;
 	
+	char* start_p = buffer;
+	char* cur_p = buffer;
 	hallSensor->thread_run = TRUE;
 	while (hallSensor->thread_run)
 	{
 		int addrlen = sizeof(clientaddr);
-		
 		int retval = recvfrom(hallSensor->sock, buffer, kBufferSize, 0, (SOCKADDR*)&clientaddr, &addrlen);
-		if (retval == SOCKET_ERROR)
+
+		if (retval == 0)
+		{
+			cout << ("socket end") << endl;
+			hallSensor->thread_run = FALSE;
+			continue;
+		}
+		else if (retval < 0)
 		{
 			cout << ("recvfrom()") << endl;
 			continue;
@@ -98,10 +111,12 @@ DWORD WINAPI UDP_HallSensor::RecvThread(void* data)
 
 		buffer[retval] = 0;
 
-		cout << "UDP : " << buffer << endl;
+		string line = string(buffer);
+
+		//cout << "UDP : " << buffer << endl;
 
 		//ZDongleData receive_data(onebyte);
-		//zdongle->callbackfunc((void*)&receive_data, zdongle->context);
+		hallSensor->callbackfunc((void*)&line, hallSensor->context);
 
 		Sleep(0);
 	}

@@ -11,7 +11,7 @@ public:
 
 	BOOL isOpen();
 
-	BOOL Open();
+	BOOL Open(BOOL default_column = TRUE);
 	void Write(const string& str);
 	void Close();
 };

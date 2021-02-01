@@ -44,12 +44,20 @@ enum eCheckImageCode {
 	kChecked
 };
 
+enum eEventSelect
+{
+	kEventZDongle = 0,
+	kEventHallSensor
+};
+
 const int kSerialGppCount = 18;
 const int kSerialLoadcellCount = 3;
 
 const int kPortPerChamber = 11;
 const int kChamberCount = 3;
 const int kTotalPort = kPortPerChamber * kChamberCount;
+
+const int kPositionScale = 250;
 
 const string kJsonfile = ".\\gppc.json";
 
@@ -124,6 +132,13 @@ protected:
 	afx_msg void OnCbnSelchangeComboSerialLoadcell2();
 	afx_msg void OnCbnSelchangeComboSerialLoadcell3();
 	afx_msg void OnCbnSelchangeComboSerialDongle();
+	afx_msg void OnBnClickedRadio(UINT uiID);
+	afx_msg void OnChangeEditHallsensorPort();
+	afx_msg void OnChangeEditStartPos();
+	afx_msg void OnChangeEditFinishiPos();
+	afx_msg void OnClickedCheckAnalyzer();
+	afx_msg void OnChangeEditAnalyzerIp();
+	afx_msg void OnChangeEditAnalyzerPort();
 	afx_msg LRESULT OnUserEvent(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 	
@@ -136,8 +151,8 @@ protected:
 	void AddStepTableRow(const int step_number, const CString start_value = _T("0.0"), const CString end_value = _T("0.0"), const CString interval = _T("0.1"));
 	void AddStepTableRow(const int step_number, StepGroup* step_group);
 	void RemoveStepTableRow(const int step_number);
-	void LoadJSonOfSteps();
-	void SaveJSonOfSteps();
+	void LoadJSonOfSteps(const string& filepath);
+	void SaveJSonOfSteps(const string& filepath);
 	void UpdateStepGroups();
 
 	// UI - Serial
@@ -146,11 +161,19 @@ protected:
 	CComboBox combo_dongle;
 	void InitComboSerial();	// Serial Combobox 초기화
 
-
 	// UI - calcurate delay
 	CString carrier_speed;
 	CString distance[kStepMax];
 	CString delay[kStepMax];
+
+	// UI - port & ip
+	int event_selection;
+	CString hallsensor_port;
+	CString hallsensor_start_pos;
+	CString hallsensor_finishi_pos;
+	CButton analyzer_check;
+	CString analyzer_ip;
+	CString analyzer_port;
 
 	// test flag
 	bool test_running;
@@ -174,7 +197,10 @@ protected:
 	// UDP
 	WSADATA wsa;
 	UDP_HallSensor udp_hallsensor;
+	int start_position;
+	int finishi_position;
 	UDP_Analyzer udp_analyzer;
+	static void HallSensorReceiveCB(void* data, void* context);
 
 	int zStatus;
 
@@ -186,4 +212,6 @@ protected:
 	unsigned int trycount;
 	map<CString, int> discovered_serial;
 	void SelchangeComboSerial(const int combobox_number);
+
+	CComboBox combo_runmode;
 };

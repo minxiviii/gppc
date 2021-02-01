@@ -4,6 +4,11 @@
 
 class UDP_Analyzer
 {
+public:
+	static const string kMsgStart;
+	static const string kMsgRunning;
+	static const string kMsgFinish;
+
 private:
 	SOCKET sock;
 	SOCKADDR_IN serveraddr;

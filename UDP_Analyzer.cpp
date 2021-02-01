@@ -3,6 +3,10 @@
 
 #include <WS2tcpip.h>
 
+const string UDP_Analyzer::kMsgStart = "START,";
+const string UDP_Analyzer::kMsgRunning = "RUNNING,";
+const string UDP_Analyzer::kMsgFinish = "FINISH,";
+
 UDP_Analyzer::UDP_Analyzer()
 	: sock(INVALID_SOCKET)
 {
