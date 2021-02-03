@@ -1032,6 +1032,7 @@ void CgppcDlg::TestStart(BOOL start)
 	else
 	{
 		zStatus = kEventZIdle;
+		/*
 		for (int i = 0; i < kSerialGppCount; i++)
 		{
 			for (int j = 0; j < power_controller[i].GetPortCount(); j++)
@@ -1039,6 +1040,7 @@ void CgppcDlg::TestStart(BOOL start)
 				power_controller[i].ResetSchedule(j);
 			}
 		}
+		*/
 
 		for (int i = 0; i < kSerialGppCount; i++)
 		{
@@ -1049,17 +1051,6 @@ void CgppcDlg::TestStart(BOOL start)
 				// 연결되면 모든 연결된 포트에 ALLOUTON 과 VSET 명령을 날린다
 				for (int j = 0; j < power_controller[i].GetPortCount(); j++)
 				{
-					/*
-					if (i < 6)
-					{
-						// 1 ~ 6번 까지는 0.3, Ready 상태가 사라지면서 추가됨
-						power_controller[i].SendCommand(j, "ISET", "0.300");
-					}
-					else
-					{
-						power_controller[i].SendCommand(j, "ISET", "0.000");
-					}
-					*/
 					power_controller[i].SendCommand(j, "ISET", "0.000");
 				}
 			}
@@ -1492,17 +1483,6 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 				// 연결되면 모든 연결된 포트에 ALLOUTON 과 VSET 명령을 날린다
 				for (int j = 0; j < power_controller[i].GetPortCount(); j++)
 				{
-					/*
-					if (i < 6)
-					{
-						// 1 ~ 6번 까지는 0.3, Ready 상태가 사라지면서 추가됨
-						power_controller[i].SendCommand(j, "ISET", "0.300");
-					}
-					else
-					{
-						power_controller[i].SendCommand(j, "ISET", "0.000");
-					}
-					*/
 					power_controller[i].SendCommand(j, "ISET", "0.000");
 				}
 			}
