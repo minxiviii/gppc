@@ -231,5 +231,5 @@ void PowerController::Command_CB(char* buffer, int len, void* handle)
 
 int PowerController::GetStep(int port_index)
 {
-	return (port_index < GetPortCount()) ? powerport[port_index].GetStep() : 0;
+	return (port_index < GetPortCount()) ? powerport[port_index].GetStep() : -1;
 }

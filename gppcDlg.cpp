@@ -55,6 +55,7 @@ CgppcDlg::CgppcDlg(CWnd* pParent /*=nullptr*/)
 void CgppcDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_LIST_0, listctrl_of_steptable[kStep0]);
 	DDX_Control(pDX, IDC_LIST_1, listctrl_of_steptable[kStep1]);
 	DDX_Control(pDX, IDC_LIST_2, listctrl_of_steptable[kStep2]);
 	DDX_Control(pDX, IDC_LIST_3, listctrl_of_steptable[kStep3]);
@@ -86,6 +87,7 @@ void CgppcDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_COMBO_SERIAL_LOADCELL_3, combo_loadcell[2]);
 	DDX_Control(pDX, IDC_COMBO_SERIAL_DONGLE, combo_dongle);
 	DDX_Text(pDX, IDC_EDIT_SPEED, carrier_speed);
+	DDX_Text(pDX, IDC_EDIT_DISTANCE0, distance[kStep0]);
 	DDX_Text(pDX, IDC_EDIT_DISTANCE1, distance[kStep1]);
 	DDX_Text(pDX, IDC_EDIT_DISTANCE2, distance[kStep2]);
 	DDX_Text(pDX, IDC_EDIT_DISTANCE3, distance[kStep3]);
@@ -94,6 +96,7 @@ void CgppcDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDIT_DISTANCE6, distance[kStep6]);
 	DDX_Text(pDX, IDC_EDIT_DISTANCE7, distance[kStep7]);
 	DDX_Text(pDX, IDC_EDIT_DISTANCE8, distance[kStep8]);
+	DDX_Text(pDX, IDC_EDIT_DELAY0, delay[kStep0]);
 	DDX_Text(pDX, IDC_EDIT_DELAY1, delay[kStep1]);
 	DDX_Text(pDX, IDC_EDIT_DELAY2, delay[kStep2]);
 	DDX_Text(pDX, IDC_EDIT_DELAY3, delay[kStep3]);
@@ -167,6 +170,8 @@ BEGIN_MESSAGE_MAP(CgppcDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_CHECK_ANALYZER, &CgppcDlg::OnClickedCheckAnalyzer)
 	ON_EN_CHANGE(IDC_EDIT_START_POS, &CgppcDlg::OnChangeEditStartPos)
 	ON_EN_CHANGE(IDC_EDIT_FINISHI_POS, &CgppcDlg::OnChangeEditFinishiPos)
+	ON_BN_CLICKED(IDC_BUTTON_S0_ADD_GROUP, &CgppcDlg::OnBnClickedButtonS0AddGroup)
+	ON_BN_CLICKED(IDC_BUTTON_S0_DEL_GROUP, &CgppcDlg::OnBnClickedButtonS0DelGroup)
 END_MESSAGE_MAP()
 
 // CgppcDlg 메시지 처리기
@@ -525,7 +530,7 @@ afx_msg void CgppcDlg::LoadJSonOfSteps(const string& filepath)
 	if (!ok) { return; }
 
 	const char key_stepinfo[] = "step_info";
-	for (int step = kStep1; step < kStepMax; step++)
+	for (int step = kStep0; step < kStepMax; step++)
 	{
 		string str_step("step_" + to_string(step + 1));
 
@@ -625,7 +630,7 @@ void CgppcDlg::SaveJSonOfSteps(const string& filepath)
 	Json::Value delay_info;
 
 	UpdateData(TRUE);
-	for (int step = kStep1; step < kStepMax; step++)
+	for (int step = kStep0; step < kStepMax; step++)
 	{	
 		string str_step("step_" + to_string(step + 1));
 		int row_count = listctrl_of_steptable[step].GetItemCount();
@@ -678,7 +683,7 @@ void CgppcDlg::SaveJSonOfSteps(const string& filepath)
 
 void CgppcDlg::UpdateStepGroups()
 {
-	for (int step = kStep1; step < kStepMax; step++)
+	for (int step = kStep0; step < kStepMax; step++)
 	{
 		step_groups[step].clear();
 		int row_count = listctrl_of_steptable[step].GetItemCount();
@@ -705,12 +710,14 @@ void CgppcDlg::UpdateStepGroups()
 			if (this->delay[step].GetLength() < 1) { this->delay[step] = _T("0"); }
 			int delay = _ttoi(this->delay[step]);
 
-			StepGroup step_group(start_text, end_text, interval_text, member, delay, step+1);
+			//StepGroup step_group(start_text, end_text, interval_text, member, delay, step+1);
+			StepGroup step_group(start_text, end_text, interval_text, member, delay, step);	// ready step이 생겨서 +1 삭제
 			step_groups[step].push_back(step_group);
 		}
 	}
 }
 
+void CgppcDlg::OnBnClickedButtonS0AddGroup() { AddStepTableRow(kStep0); }
 void CgppcDlg::OnBnClickedButtonS1AddGroup() { AddStepTableRow(kStep1); }
 void CgppcDlg::OnBnClickedButtonS2AddGroup() { AddStepTableRow(kStep2); }
 void CgppcDlg::OnBnClickedButtonS3AddGroup() { AddStepTableRow(kStep3); }
@@ -720,6 +727,7 @@ void CgppcDlg::OnBnClickedButtonS6AddGroup() { AddStepTableRow(kStep6); }
 void CgppcDlg::OnBnClickedButtonS7AddGroup() { AddStepTableRow(kStep7); }
 void CgppcDlg::OnBnClickedButtonS8AddGroup() { AddStepTableRow(kStep8); }
 
+void CgppcDlg::OnBnClickedButtonS0DelGroup() { RemoveStepTableRow(kStep0); }
 void CgppcDlg::OnBnClickedButtonS1DelGroup() { RemoveStepTableRow(kStep1); }
 void CgppcDlg::OnBnClickedButtonS2DelGroup() { RemoveStepTableRow(kStep2); }
 void CgppcDlg::OnBnClickedButtonS3DelGroup() { RemoveStepTableRow(kStep3); }
@@ -985,15 +993,19 @@ void CgppcDlg::OnChangeEditFinishiPos()
 void CgppcDlg::TestStart(BOOL start)
 {
 	const int ids[] = {
-		IDC_LIST_1, IDC_LIST_2, IDC_LIST_3, IDC_LIST_4, IDC_LIST_5, IDC_LIST_6, IDC_LIST_7, IDC_LIST_8,
+		IDC_LIST_0, IDC_LIST_1, IDC_LIST_2, IDC_LIST_3, IDC_LIST_4, IDC_LIST_5, IDC_LIST_6, IDC_LIST_7, IDC_LIST_8,
+		IDC_BUTTON_S0_ADD_GROUP,
 		IDC_BUTTON_S1_ADD_GROUP, IDC_BUTTON_S2_ADD_GROUP, IDC_BUTTON_S3_ADD_GROUP, IDC_BUTTON_S4_ADD_GROUP,
 		IDC_BUTTON_S5_ADD_GROUP, IDC_BUTTON_S6_ADD_GROUP, IDC_BUTTON_S7_ADD_GROUP, IDC_BUTTON_S8_ADD_GROUP,
+		IDC_BUTTON_S0_DEL_GROUP,
 		IDC_BUTTON_S1_DEL_GROUP, IDC_BUTTON_S2_DEL_GROUP, IDC_BUTTON_S3_DEL_GROUP, IDC_BUTTON_S4_DEL_GROUP,
 		IDC_BUTTON_S5_DEL_GROUP, IDC_BUTTON_S6_DEL_GROUP, IDC_BUTTON_S7_DEL_GROUP, IDC_BUTTON_S8_DEL_GROUP,
 
 		IDC_EDIT_SPEED, IDC_BUTTON_DELAY_CALC,
+		IDC_EDIT_DISTANCE0,
 		IDC_EDIT_DISTANCE1, IDC_EDIT_DISTANCE2, IDC_EDIT_DISTANCE3, IDC_EDIT_DISTANCE4,
 		IDC_EDIT_DISTANCE5, IDC_EDIT_DISTANCE6, IDC_EDIT_DISTANCE7, IDC_EDIT_DISTANCE8,
+		IDC_EDIT_DELAY0,
 		IDC_EDIT_DELAY1, IDC_EDIT_DELAY2, IDC_EDIT_DELAY3, IDC_EDIT_DELAY4,
 		IDC_EDIT_DELAY5, IDC_EDIT_DELAY6, IDC_EDIT_DELAY7, IDC_EDIT_DELAY8,
 
@@ -1012,7 +1024,7 @@ void CgppcDlg::TestStart(BOOL start)
 		// update step_groups
 		UpdateStepGroups();
 		step_linear.clear();
-		for (int step = kStep1; step < kStepMax; step++)
+		for (int step = kStep0; step < kStepMax; step++)
 		{
 			int row_count = (int)step_groups[step].size();
 			for (int row = 0; row < row_count; row++)
@@ -1023,7 +1035,7 @@ void CgppcDlg::TestStart(BOOL start)
 
 		csv.Open();
 
-		for (int i = kStep1; i < kStepMax; i++) { TestAddSchedule(i); }
+		for (int i = kStep0; i < kStepMax; i++) { TestAddSchedule(i); }
 		zStatus = kEventZIdle;
 #ifdef __DEBUG_CONSOLE__
 		cout << endl << "[ TESTING START  -  WAITING FOR SIGNAL ]" << endl;
@@ -1100,7 +1112,8 @@ void CgppcDlg::TestAddSchedule(int step)
 
 			if (power_controller[ctrl_index].IsOpen())
 			{
-				power_controller[ctrl_index].AddSchedule(port_index, kISET, iset_value, step+1);
+				//power_controller[ctrl_index].AddSchedule(port_index, kISET, iset_value, step+1);
+				power_controller[ctrl_index].AddSchedule(port_index, kISET, iset_value, step); // Ready Step이 생겨서 + 1 없앰
 			}
 		}
 	}
@@ -1111,7 +1124,8 @@ void CgppcDlg::TestAddSchedule(int step)
 		{
 			for (int j = 0; j < power_controller[i].GetPortCount(); j++)
 			{
-				power_controller[i].AddSchedule(j, kDelay, delay_value, step+1);
+				//power_controller[i].AddSchedule(j, kDelay, delay_value, step+1);
+				power_controller[i].AddSchedule(j, kDelay, delay_value, step);
 			}
 		}
 	}
@@ -1352,14 +1366,14 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 		sprintf_s(time_buf, "%04d.%02d.%02d %02d:%02d:%02d.%.3d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 		string time = time_buf;
 		
-		int step_value(0);
+		int step_value(-1);
 		string current;	// current
 		for (int i = 0; i < kSerialGppCount; i++)
 		{
 			int port_count = power_controller[i].GetPortCount();
 			for (int j = 0; j < port_count; j++)
 			{			
-				if (step_value == 0) { step_value = power_controller[i].GetStep(j); }
+				if (step_value == -1) { step_value = power_controller[i].GetStep(j); }
 				
 				current += power_controller[i].GetCurrent(j);
 				current += ",";
@@ -1367,9 +1381,10 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 		}
 
 		// section
-		string section = (step_value < 5) ? "A," : "B,";
+		string section = (step_value < kStep5) ? "A," : "B,";
 
 		// step
+		//if (step_value == kStep0) { step_value++; }
 		string step = to_string(step_value);
 		
 		// weight
@@ -1464,7 +1479,7 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 			}
 		}
 
-		for (int i = kStep1; i < kStepMax; i++) { TestAddSchedule(i); }
+		for (int i = kStep0; i < kStepMax; i++) { TestAddSchedule(i); }
 	}
 	else if (event == kEventZFinish)
 	{
@@ -1527,7 +1542,7 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 			}
 		}
 
-		for (int i = kStep1; i < kStepMax; i++) { TestAddSchedule(i); }
+		for (int i = kStep0; i < kStepMax; i++) { TestAddSchedule(i); }
 
 		// 10개씩 잘라서
 		if (trycount % 10 == 0)
@@ -1539,5 +1554,3 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 	
 	return 1;
 }
-
-

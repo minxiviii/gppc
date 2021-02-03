@@ -23,6 +23,7 @@
 #define IDC_BUTTON_S4_DEL_GROUP         1015
 #define IDC_EDIT_DISTANCE1              1016
 #define IDC_BUTTON_SERIAL_ALL_CONNECT   1017
+#define IDC_EDIT_DISTANCE0              1017
 #define IDC_BUTTON_DELAY_CALC           1018
 #define IDC_BUTTON_LOAD                 1019
 #define IDC_COMBO_SERIAL2               1020
@@ -70,12 +71,15 @@
 #define IDC_CHECK_ANALYZER              1050
 #define IDC_EDIT_START_POS              1051
 #define IDC_EDIT_FINISHI_POS            1052
+#define IDC_LIST_0                      1053
 #define IDC_COMBO_RUNMODE               1054
 #define IDC_EDIT_FILE                   1055
+#define IDC_BUTTON_S0_ADD_GROUP         1056
 #define IDC_LIST_5                      1057
 #define IDC_LIST_6                      1058
 #define IDC_LIST_7                      1059
 #define IDC_LIST_8                      1060
+#define IDC_BUTTON_S0_DEL_GROUP         1061
 #define IDC_COMBO_SERIAL7               1082
 #define IDC_COMBO_SERIAL_GPP_07         1082
 #define IDC_COMBO_SERIAL8               1083
@@ -124,6 +128,7 @@
 #define IDC_EDIT_DELAY4                 1111
 #define IDC_COMBO_SERIAL_LOADCELL_3     1112
 #define IDC_BUTTON_SERIAL_ALL_DISCONNECT 1113
+#define IDC_EDIT_DELAY0                 1113
 #define IDC_BUTTON_SERIAL_GPP_13        1114
 #define IDC_BUTTON_SERIAL_GPP_14        1115
 #define IDC_EDIT_DELAY5                 1116

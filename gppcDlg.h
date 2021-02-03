@@ -28,7 +28,8 @@ enum eUserEvent {
 };
 
 enum eStepTableIndex {
-	kStep1 = 0,
+	kStep0 = 0,
+	kStep1,
 	kStep2,
 	kStep3,
 	kStep4,
@@ -214,4 +215,7 @@ protected:
 	void SelchangeComboSerial(const int combobox_number);
 
 	CComboBox combo_runmode;
+public:
+	afx_msg void OnBnClickedButtonS0AddGroup();
+	afx_msg void OnBnClickedButtonS0DelGroup();
 };
