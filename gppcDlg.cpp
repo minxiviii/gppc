@@ -1031,8 +1031,6 @@ void CgppcDlg::TestStart(BOOL start)
 	}
 	else
 	{
-		OnBnClickedButtonSerialAllDisconnect();
-
 		zStatus = kEventZIdle;
 		for (int i = 0; i < kSerialGppCount; i++)
 		{
@@ -1041,6 +1039,33 @@ void CgppcDlg::TestStart(BOOL start)
 				power_controller[i].ResetSchedule(j);
 			}
 		}
+
+		for (int i = 0; i < kSerialGppCount; i++)
+		{
+			BOOL result = power_controller[i].IsOpen();
+			if (result)
+			{
+				power_controller[i].ResetSchedule();
+				// 연결되면 모든 연결된 포트에 ALLOUTON 과 VSET 명령을 날린다
+				for (int j = 0; j < power_controller[i].GetPortCount(); j++)
+				{
+					/*
+					if (i < 6)
+					{
+						// 1 ~ 6번 까지는 0.3, Ready 상태가 사라지면서 추가됨
+						power_controller[i].SendCommand(j, "ISET", "0.300");
+					}
+					else
+					{
+						power_controller[i].SendCommand(j, "ISET", "0.000");
+					}
+					*/
+					power_controller[i].SendCommand(j, "ISET", "0.000");
+				}
+			}
+		}
+
+		OnBnClickedButtonSerialAllDisconnect();
 		csv.Close();
 #ifdef __DEBUG_CONSOLE__
 		cout << endl << "[ TESTING END ]" << endl;
@@ -1244,7 +1269,7 @@ void CgppcDlg::HallSensorReceiveCB(void* data, void* context)
 
 	if (split.size() < kIdxHallSensorBegin || split[kIdxTrackState].compare("CM_TRACK_ACTIVE") != 0)
 	{
-		cout << "error : " << "size = " << split.size() << endl;
+		//cout << "error : " << "size = " << split.size() << endl;
 		return;
 	}
 
@@ -1381,6 +1406,7 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 	}
 	else if (event == kEventZStart)
 	{
+		if (zStatus == kEventZStart) { return 1; }
 		zStatus = event;
 		trycount++;
 #ifdef __DEBUG_CONSOLE__
@@ -1466,6 +1492,7 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 				// 연결되면 모든 연결된 포트에 ALLOUTON 과 VSET 명령을 날린다
 				for (int j = 0; j < power_controller[i].GetPortCount(); j++)
 				{
+					/*
 					if (i < 6)
 					{
 						// 1 ~ 6번 까지는 0.3, Ready 상태가 사라지면서 추가됨
@@ -1475,7 +1502,8 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 					{
 						power_controller[i].SendCommand(j, "ISET", "0.000");
 					}
-					
+					*/
+					power_controller[i].SendCommand(j, "ISET", "0.000");
 				}
 			}
 		}
