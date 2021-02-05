@@ -16,18 +16,28 @@
 #define new DEBUG_NEW
 #endif
 
+enum ePacketIndex {
+	kIdxTrackState = 0,
+	kIdxCarrierState,
+	kIdxCarrierPosition,
+	kIdxCarrierAcceleration,
+	kIdxCarrierVelocity,
+	kIdxHallSensorBegin,
+};
+
 static const int kStepfullLength = 10240;
 static string stepfull(kStepfullLength, '\0');
 
-
-static const int kMovingBacward = 0;
-static const int kMovingForward = 1;
+static const int kCarrierUnknown = -1;
 static const int kCarrierStopped = 0;
 static const int kCarrierMoving = 1;
 
-static int last_carrier_movement(kCarrierMoving);
-static int last_carrier_velocity(0);
-static int last_carrier_direction(kMovingBacward);
+static const int kMovingUnknown = -1;
+static const int kMovingBacward = 0;
+static const int kMovingForward = 1;
+
+static int last_carrier_movement(kCarrierUnknown);
+static int last_carrier_direction(kMovingUnknown);
 
 template<typename ... Args>
 std::string string_format(const std::string& format, Args ... args)
@@ -1002,9 +1012,8 @@ void CgppcDlg::TestStart(BOOL start)
 
 	if (start)
 	{
-		last_carrier_movement = kCarrierMoving;
-		last_carrier_velocity = 0;
-		last_carrier_direction = kMovingBacward;
+		last_carrier_movement = kCarrierUnknown;
+		last_carrier_direction = kMovingUnknown;
 
 		OnBnClickedButtonSerialAllConnect();
 
@@ -1239,15 +1248,6 @@ void CgppcDlg::HallSensorReceiveCB(void* data, void* context)
 	CgppcDlg* ctx = (CgppcDlg*)context;
 	if (!ctx->test_running) { return; }
 
-	enum ePacketIndex {
-		kIdxTrackState = 0,
-		kIdxCarrierState,
-		kIdxCarrierPosition,
-		kIdxCarrierAcceleration,
-		kIdxCarrierVelocity,
-		kIdxHallSensorBegin,
-	};
-	
 	string* line = (string*)data;
 	stringstream ss(*line);
 	string temp;
@@ -1264,30 +1264,33 @@ void CgppcDlg::HallSensorReceiveCB(void* data, void* context)
 		return;
 	}
 
+	//cout << *line;
 	int carrier_movement = (split[kIdxCarrierState].compare("CM_CARRIER_MOVING") == 0) ? kCarrierMoving : kCarrierStopped;
 	int carrier_velocity = atoi(split[kIdxCarrierVelocity].c_str());
 
 	int carrier_direction(kMovingBacward);
+	if (abs(carrier_velocity) <= 1000) { carrier_velocity = 0; }
 	if (carrier_movement == kCarrierMoving)
 	{
 		carrier_direction = (carrier_velocity > 0) ? kMovingForward :
-							(carrier_velocity < 0) ? kMovingBacward : last_carrier_direction;
+			(carrier_velocity < 0) ? kMovingBacward : last_carrier_direction;
 	}
 	else
 	{
 		if (last_carrier_movement == kCarrierMoving)
 		{
-			carrier_direction = (last_carrier_direction == kMovingForward) ? kMovingBacward : kMovingForward;
+			carrier_direction = (carrier_velocity > 0) ? kMovingForward :
+				(carrier_velocity < 0) ? kMovingBacward : last_carrier_direction;
 		}
 	}
 
-	//cout << "L. m = " << last_carrier_movement << ", v = " << last_carrier_velocity << ", d = " << last_carrier_direction << endl;
-	//cout << "C. m = " << carrier_movement << ", v = " << carrier_velocity << ", d = " << carrier_direction << endl << endl;
+	//cout << "L. m = " << last_carrier_movement << ", d = " << last_carrier_direction << endl;
+	//cout << "C. m = " << carrier_movement << ", d = " << carrier_direction << endl;
 
 	if (last_carrier_movement == kCarrierStopped && carrier_movement == kCarrierMoving)
 	{
-		//cout << "1.1 = " << carrier_direction << endl;
-		if (carrier_direction == kMovingForward)
+		//cout << "1.1 = " << last_carrier_movement << endl;
+		if (last_carrier_direction == kMovingBacward)
 		{
 			//cout << "1.2" << endl;
 			::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZStart, (LPARAM)NULL);
@@ -1295,45 +1298,16 @@ void CgppcDlg::HallSensorReceiveCB(void* data, void* context)
 	}
 	else if (last_carrier_movement == kCarrierMoving && carrier_movement == kCarrierStopped)
 	{
-		//cout << "2.1 = " << carrier_direction << endl;
-		if (carrier_direction == kMovingBacward)
+		//cout << "2.1 = " << last_carrier_movement << endl;
+		if (last_carrier_direction == kMovingForward)
 		{
 			//cout << "2.2" << endl;
 			::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZFinish, (LPARAM)NULL);
 		}
 	}
 
-
-	last_carrier_direction = carrier_direction;
+	if (carrier_movement == kCarrierMoving) { last_carrier_direction = carrier_direction; }
 	last_carrier_movement = carrier_movement;
-	last_carrier_velocity = carrier_velocity;
-
-	/*		
-	if (ctx->zStatus != kEventZStart)
-	{
-		if (split[kIdxCarrierState].compare("CM_CARRIER_MOVING") == 0 && velocity > 0)
-		{
-			int carrier_position = atoi(split[kIdxCarrierPosition].c_str());
-			int value = abs(carrier_position - ctx->start_position);
-			if (value < kPositionScale)
-			{
-				::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZStart, (LPARAM)NULL);
-			}
-		}
-	}
-	else if (ctx->zStatus != kEventZFinish)
-	{
-		if (split[kIdxCarrierState].compare("CM_CARRIER_STOPPED") == 0)
-		{
-			int carrier_position = atoi(split[kIdxCarrierPosition].c_str());
-			int value = abs(carrier_position - ctx->finishi_position);
-			if (value < kPositionScale)
-			{
-				::PostMessage(ctx->m_hWnd, WM_USEREVENT, (WPARAM)kEventZFinish, (LPARAM)NULL);
-			}
-		}
-	}
-	*/
 }
 
 afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
