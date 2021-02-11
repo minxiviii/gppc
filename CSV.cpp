@@ -2,12 +2,15 @@
 #include "CSV.h"
 
 
-BOOL CSV::Open(BOOL default_column)
+BOOL CSV::Open(const CString& carrier_speed, BOOL default_column)
 {
 	SYSTEMTIME st;
 	GetLocalTime(&st);
-	WCHAR filename[128] = { 0, };
-	wsprintf(filename, _T("CnC_%04d%02d%02d-%02d%02d%02d.csv"), st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+
+	CString time;
+	time.Format(_T("_%04d%02d%02d-%02d%02d%02d.csv"), st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+
+	CString filename = _T("CnC_") + carrier_speed + time;
 	m_hCSV = CreateFile(filename, GENERIC_WRITE | GENERIC_READ, 0, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 	if (m_hCSV == INVALID_HANDLE_VALUE)
 	{

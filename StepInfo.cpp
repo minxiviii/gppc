@@ -101,3 +101,9 @@ int StepGroup::GetStep()
 {
 	return step;
 }
+
+int StepGroup::GetGainCount()
+{
+	int value = abs(dec_start - dec_end) / abs(gain);
+	return value + 1;
+}

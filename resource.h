@@ -80,6 +80,8 @@
 #define IDC_LIST_7                      1059
 #define IDC_LIST_8                      1060
 #define IDC_BUTTON_S0_DEL_GROUP         1061
+#define IDC_BUTTON_TOTALCOUNT           1062
+#define IDC_EDIT_TATALCOUNT             1063
 #define IDC_COMBO_SERIAL7               1082
 #define IDC_COMBO_SERIAL_GPP_07         1082
 #define IDC_COMBO_SERIAL8               1083
@@ -147,7 +149,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        130
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1056
+#define _APS_NEXT_CONTROL_VALUE         1064
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

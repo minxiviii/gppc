@@ -211,6 +211,7 @@ protected:
 
 	CSV csv;
 	unsigned int trycount;
+	unsigned int total_trycount;
 	map<CString, int> discovered_serial;
 	void SelchangeComboSerial(const int combobox_number);
 
@@ -218,4 +219,5 @@ protected:
 public:
 	afx_msg void OnBnClickedButtonS0AddGroup();
 	afx_msg void OnBnClickedButtonS0DelGroup();
+	afx_msg void OnBnClickedButtonTotalcount();
 };

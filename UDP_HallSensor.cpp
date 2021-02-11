@@ -105,7 +105,8 @@ DWORD WINAPI UDP_HallSensor::RecvThread(void* data)
 		}
 		else if (retval < 0)
 		{
-			cout << ("recvfrom()") << endl;
+			//cout << ("recvfrom()") << endl;
+			hallSensor->thread_run = FALSE;
 			continue;
 		}
 

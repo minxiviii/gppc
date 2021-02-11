@@ -43,4 +43,5 @@ public:
 
 	int GetDelayms();
 	int GetStep();
+	int GetGainCount();
 };

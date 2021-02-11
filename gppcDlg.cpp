@@ -182,6 +182,7 @@ BEGIN_MESSAGE_MAP(CgppcDlg, CDialogEx)
 	ON_EN_CHANGE(IDC_EDIT_FINISHI_POS, &CgppcDlg::OnChangeEditFinishiPos)
 	ON_BN_CLICKED(IDC_BUTTON_S0_ADD_GROUP, &CgppcDlg::OnBnClickedButtonS0AddGroup)
 	ON_BN_CLICKED(IDC_BUTTON_S0_DEL_GROUP, &CgppcDlg::OnBnClickedButtonS0DelGroup)
+	ON_BN_CLICKED(IDC_BUTTON_TOTALCOUNT, &CgppcDlg::OnBnClickedButtonTotalcount)
 END_MESSAGE_MAP()
 
 // CgppcDlg 메시지 처리기
@@ -294,7 +295,6 @@ void CgppcDlg::Exit()
 {
 	if (test_running)
 	{
-		test_running = FALSE;
 		TestStart(FALSE);
 	}
 
@@ -955,9 +955,8 @@ void CgppcDlg::OnBnClickedButtonSerialAllDisconnect()
 
 void CgppcDlg::OnBnClickedButtonTest()
 {	
-	stepfull.clear();
 	TestStart(!test_running);
-	test_running = !test_running;
+	//test_running = !test_running;
 }
 
 void CgppcDlg::OnChangeEditHallsensorPort()
@@ -1019,7 +1018,7 @@ void CgppcDlg::TestStart(BOOL start)
 		IDC_EDIT_DELAY1, IDC_EDIT_DELAY2, IDC_EDIT_DELAY3, IDC_EDIT_DELAY4,
 		IDC_EDIT_DELAY5, IDC_EDIT_DELAY6, IDC_EDIT_DELAY7, IDC_EDIT_DELAY8,
 
-		IDC_BUTTON_LOAD, IDC_BUTTON_SAVE, IDC_COMBO_RUNMODE
+		IDC_BUTTON_LOAD, IDC_BUTTON_SAVE, IDC_COMBO_RUNMODE, IDC_BUTTON_TOTALCOUNT
 	};
 
 	if (start)
@@ -1030,6 +1029,7 @@ void CgppcDlg::TestStart(BOOL start)
 		OnBnClickedButtonSerialAllConnect();
 
 		trycount = 0;
+		total_trycount = 1;
 		// update step_groups
 		UpdateStepGroups();
 		step_linear.clear();
@@ -1039,19 +1039,27 @@ void CgppcDlg::TestStart(BOOL start)
 			for (int row = 0; row < row_count; row++)
 			{
 				step_linear.push_back(&step_groups[step][row]);
+				int count = step_groups[step][row].GetGainCount();
+				total_trycount *= count;
 			}
 		}
 
-		csv.Open();
+		CString str;
+		str.Format(_T("%d"), total_trycount);
+		GetDlgItem(IDC_EDIT_TATALCOUNT)->SetWindowTextW(str);
 
+		csv.Open(carrier_speed);
+		stepfull.clear();
 		for (int i = kStep0; i < kStepMax; i++) { TestAddSchedule(i); }
 		zStatus = kEventZIdle;
+		test_running = start;
 #ifdef __DEBUG_CONSOLE__
 		cout << endl << "[ TESTING START  -  WAITING FOR SIGNAL ]" << endl;
 #endif
 	}
 	else
 	{
+		test_running = start;
 		zStatus = kEventZIdle;
 		/*
 		for (int i = 0; i < kSerialGppCount; i++)
@@ -1390,7 +1398,7 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 		zStatus = event;
 		trycount++;
 #ifdef __DEBUG_CONSOLE__
-		cout << endl << "[ Z-START ] : Try Count " << trycount << endl;
+		cout << endl << "[ Z-START ] : Try Count " << trycount << " [ Total : " << total_trycount << " ]" << endl;
 #endif
 
 		for (int i = 0; i < kSerialGppCount; i++)
@@ -1510,21 +1518,43 @@ afx_msg LRESULT CgppcDlg::OnUserEvent(WPARAM wParam, LPARAM lParam)
 #ifdef __DEBUG_CONSOLE__
 				cout << endl << "[ Z-END ]" << endl;
 #endif
-				test_running = FALSE;
-				TestStart(test_running);
+				TestStart(FALSE);
 				return 1;
 			}
 		}
 
 		for (int i = kStep0; i < kStepMax; i++) { TestAddSchedule(i); }
 
-		// 10개씩 잘라서
+		/* 10개씩 잘라서
 		if (trycount % 10 == 0)
 		{
 			csv.Close();
-			csv.Open();
-		}	
+			csv.Open(carrier_speed);
+		}
+		*/
 	}
 	
 	return 1;
+}
+
+
+void CgppcDlg::OnBnClickedButtonTotalcount()
+{
+	total_trycount = 1;
+	// update step_groups
+	UpdateStepGroups();
+	
+	for (int step = kStep0; step < kStepMax; step++)
+	{
+		int row_count = (int)step_groups[step].size();
+		for (int row = 0; row < row_count; row++)
+		{
+			int count = step_groups[step][row].GetGainCount();
+			total_trycount *= count;
+		}
+	}
+
+	CString str;
+	str.Format(_T("%d"), total_trycount);
+	GetDlgItem(IDC_EDIT_TATALCOUNT)->SetWindowTextW(str);
 }
